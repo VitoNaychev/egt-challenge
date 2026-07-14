@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"log/slog"
 	"net/http"
 
 	"github.com/VitoNaychev/egt-challenge/ingestion/service"
@@ -19,12 +20,14 @@ type EventService interface {
 var validate = validator.New()
 
 type EventHandler struct {
-	svc EventService
+	svc    EventService
+	logger *slog.Logger
 }
 
-func NewEventHandler(svc EventService) *EventHandler {
+func NewEventHandler(svc EventService, logger *slog.Logger) *EventHandler {
 	return &EventHandler{
-		svc: svc,
+		svc:    svc,
+		logger: logger,
 	}
 }
 
@@ -56,18 +59,23 @@ func (e *EventHandler) handleEvent(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	eventLogger := e.logger.With(slog.String("event_id", event.ID))
+
 	err = e.svc.Publish(r.Context(), service.Event{
 		ID:      event.ID,
 		Message: event.Message,
 	})
 	if err != nil {
 		if errors.Is(err, service.ErrPublishTimeout) {
+			eventLogger.Warn("publish timed out", slog.Any("error", err))
 			w.WriteHeader(http.StatusServiceUnavailable)
 			return
 		}
+		eventLogger.Error("publish failed", slog.Any("error", err))
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
+	eventLogger.Debug("event accepted")
 	w.WriteHeader(http.StatusAccepted)
 }
 

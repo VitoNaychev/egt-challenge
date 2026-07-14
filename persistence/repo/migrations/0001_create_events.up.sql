@@ -1,0 +1,5 @@
+CREATE TABLE IF NOT EXISTS events (
+    id VARCHAR PRIMARY KEY,
+    message VARCHAR NOT NULL
+    -- created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);

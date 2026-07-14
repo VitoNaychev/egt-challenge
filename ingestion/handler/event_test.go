@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"log/slog"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -34,7 +35,7 @@ func TestEventsHandler(t *testing.T) {
 			},
 		}
 
-		hndl := handler.NewEventHandler(svc)
+		hndl := handler.NewEventHandler(svc, slog.New(slog.DiscardHandler))
 		hndl.ServeHTTP(resp, req)
 
 		assert.Equal(t, http.StatusMethodNotAllowed, resp.Code)
@@ -70,7 +71,7 @@ func TestEventHandler_RequestValidation(t *testing.T) {
 				},
 			}
 
-			hndl := handler.NewEventHandler(svc)
+			hndl := handler.NewEventHandler(svc, slog.New(slog.DiscardHandler))
 			hndl.ServeHTTP(resp, req)
 
 			assert.Equal(t, c.expected, resp.Code)
@@ -127,7 +128,7 @@ func TestEventHandler_ServiceCases(t *testing.T) {
 				},
 			}
 
-			hndl := handler.NewEventHandler(svc)
+			hndl := handler.NewEventHandler(svc, slog.New(slog.DiscardHandler))
 			hndl.ServeHTTP(resp, req)
 
 			assert.Equal(t, c.expected, resp.Code)

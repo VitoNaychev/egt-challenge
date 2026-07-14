@@ -7,6 +7,7 @@ import (
 
 	"github.com/VitoNaychev/egt-challenge/ingestion/service"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestPublish(t *testing.T) {
@@ -24,8 +25,8 @@ func TestPublish(t *testing.T) {
 		}
 		svc := service.NewEventService(pub)
 		err := svc.Publish(context.Background(), want)
+		require.NoError(t, err)
 
-		assert.NoError(t, err)
 		assert.Len(t, pub.PublishCalls(), 1, "did not call publisher")
 	})
 

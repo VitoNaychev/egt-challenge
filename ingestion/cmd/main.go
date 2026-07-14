@@ -23,6 +23,7 @@ import (
 )
 
 type Config struct {
+	LogLevel        string        `mapstructure:"LOG_LEVEL"`
 	ListenAddr      string        `mapstructure:"LISTEN_ADDR"`
 	GRPCAddr        string        `mapstructure:"GRPC_ADDR"`
 	KafkaBrokers    []string      `mapstructure:"KAFKA_BROKERS"`
@@ -38,6 +39,9 @@ func loadConfig() (Config, error) {
 	var cfg Config
 	if err := v.Unmarshal(&cfg); err != nil {
 		return Config{}, fmt.Errorf("unmarshal config: %w", err)
+	}
+	if cfg.LogLevel == "" {
+		return Config{}, errors.New("LOG_LEVEL must be set")
 	}
 	if cfg.ListenAddr == "" {
 		return Config{}, errors.New("LISTEN_ADDR must be set")
@@ -75,13 +79,17 @@ func run() error {
 		return fmt.Errorf("load config: %w", err)
 	}
 
+	var level slog.Level
+	if err := level.UnmarshalText([]byte(cfg.LogLevel)); err != nil {
+		return fmt.Errorf("parse LOG_LEVEL: %w", err)
+	}
+	slog.SetDefault(slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: level})))
+
 	writer := &kafka.Writer{
 		Addr:         kafka.TCP(cfg.KafkaBrokers...),
 		Topic:        cfg.KafkaTopic,
 		Balancer:     &kafka.Hash{},
 		RequiredAcks: kafka.RequireAll,
-		// debug convenience - lets the broker create the topic on first publish
-		AllowAutoTopicCreation: true,
 	}
 	defer func() {
 		if err := writer.Close(); err != nil {
@@ -93,7 +101,7 @@ func run() error {
 	svc := service.NewEventService(pub)
 
 	mux := http.NewServeMux()
-	mux.Handle("/events", handler.NewEventHandler(svc))
+	mux.Handle("/events", handler.NewEventHandler(svc, slog.Default().With("component", "handler")))
 
 	srv := &http.Server{
 		Addr:    cfg.ListenAddr,
