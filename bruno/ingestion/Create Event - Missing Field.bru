@@ -1,0 +1,26 @@
+meta {
+  name: Create Event - Missing Field
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{baseUrl}}/events
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "id": "evt-2"
+  }
+}
+
+assert {
+  res.status: eq 400
+}
+
+docs {
+  All payload fields are required. Omitting `message` fails validation and
+  returns 400 Bad Request with an error body.
+}

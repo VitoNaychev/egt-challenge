@@ -1,0 +1,27 @@
+meta {
+  name: Create Event - Malformed JSON
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{baseUrl}}/events
+  body: text
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:text {
+  {"id": "evt-3", "message":
+}
+
+assert {
+  res.status: eq 400
+}
+
+docs {
+  A syntactically invalid JSON body returns 400 Bad Request.
+}

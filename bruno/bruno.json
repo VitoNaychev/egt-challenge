@@ -1,0 +1,19 @@
+{
+  "version": "1",
+  "name": "egt-challenge",
+  "type": "collection",
+  "ignore": [
+    "node_modules",
+    ".git"
+  ],
+  "size": 0.0018072128295898438,
+  "filesCount": 6,
+  "protobuf": {
+    "protoFiles": [
+      {
+        "path": "../persistence/proto/event.proto",
+        "type": "file"
+      }
+    ]
+  }
+}

@@ -1,0 +1,27 @@
+meta {
+  name: Create Event
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{baseUrl}}/events
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "id": "evt-1",
+    "message": "hello, world"
+  }
+}
+
+assert {
+  res.status: eq 202
+}
+
+docs {
+  Publishes a valid event. The service validates the payload, publishes it to the
+  `events` Kafka topic, and responds with 202 Accepted — persistence is asynchronous.
+}

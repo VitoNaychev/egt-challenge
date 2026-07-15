@@ -1,0 +1,25 @@
+meta {
+  name: Get Event
+  type: grpc
+  seq: 1
+}
+
+grpc {
+  url: {{grpcUrl}}
+  method: /event.EventService/Get
+  body: grpc
+  auth: none
+  methodType: unary
+}
+
+body:grpc {
+  name: message 1
+  content: '''
+    {"id": "evt-1"}
+  '''
+}
+
+docs {
+  Fetches a single stored event by ID from the persistence service.
+  Returns NOT_FOUND if the event does not exist, INVALID_ARGUMENT on empty ID.
+}

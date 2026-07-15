@@ -98,23 +98,15 @@ docker compose up --build
 
 This starts Kafka (KRaft, single broker), PostgreSQL, one-shot init containers (topic creation, database migrations), and both services. The ingestion API listens on `localhost:8080`, the persistence gRPC server on `localhost:9091`.
 
-Publish an event:
+### Example requests (Bruno)
 
-```sh
-curl -i -X POST localhost:8080/events \
-  -H 'Content-Type: application/json' \
-  -d '{"id": "evt-1", "message": "hello, world"}'
-```
+Example requests for both services ship with the repo as a [Bruno](https://www.usebruno.com/) collection in [`bruno/`](bruno/):
 
-Query it back (with [grpcurl](https://github.com/fullstorydev/grpcurl)):
+1. Open Bruno → **Open Collection** → select the `bruno/` folder.
+2. Pick the **local** environment (top-right dropdown) — it supplies the ingestion URL (`localhost:8080`) and the persistence gRPC address (`localhost:9091`).
+3. Run **ingestion / Create Event** to publish an event, then **persistence / Get Event** or **List Events** to query it back over gRPC.
 
-```sh
-grpcurl -plaintext -proto persistence/proto/event.proto \
-  -d '{"id": "evt-1"}' localhost:9091 event.EventService/Get
-
-grpcurl -plaintext -proto persistence/proto/event.proto \
-  localhost:9091 event.EventService/List
-```
+The collection covers the happy path and both validation-failure cases (missing field, malformed JSON) for the HTTP API — each with a status-code assertion — plus the two gRPC queries. gRPC methods resolve via server reflection, or from `persistence/proto/event.proto`, which is registered at the collection level.
 
 ### Configuration
 
