@@ -1,0 +1,107 @@
+services:
+  kafka:
+    image: apache/kafka:3.9.0
+    environment:
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_LISTENERS: PLAINTEXT://:9092,CONTROLLER://:9093
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,CONTROLLER:PLAINTEXT
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/kafka/bin/kafka-broker-api-versions.sh --bootstrap-server localhost:9092 > /dev/null 2>&1"]
+      interval: 5s
+      timeout: 10s
+      retries: 12
+
+  kafka-init:
+    image: apache/kafka:3.9.0
+    depends_on:
+      kafka:
+        condition: service_healthy
+    command: >
+      sh -c "/opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:9092
+      --create --if-not-exists --topic events --partitions 3 --replication-factor 1 &&
+      /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:9092
+      --create --if-not-exists --topic events.dlq --partitions 3 --replication-factor 1"
+
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: challenge
+      POSTGRES_USER: egt
+      POSTGRES_PASSWORD: events
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U egt -d challenge"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+
+  postgres-init:
+    image: migrate/migrate:v4.18.3
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ./persistence/repo/migrations:/migrations:ro
+    command: >
+      -path=/migrations
+      -database=postgres://egt:events@postgres:5432/challenge?sslmode=disable
+      up
+
+  ingestion:
+    build:
+      context: .
+      dockerfile: ingestion/Dockerfile
+    ports:
+      - "8080:8080"
+    healthcheck:
+      test: ["CMD", "/grpc_health_probe", "-addr=localhost:9090"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    environment:
+      LOG_LEVEL: debug
+      LISTEN_ADDR: ":8080"
+      GRPC_ADDR: ":9090"
+      KAFKA_BROKERS: kafka:9092
+      KAFKA_TOPIC: events
+      PUBLISH_TIMEOUT: 2s
+      SHUTDOWN_TIMEOUT: 10s
+    depends_on:
+      kafka-init:
+        condition: service_completed_successfully
+
+  persistence:
+    build:
+      context: .
+      dockerfile: persistence/Dockerfile
+    ports:
+      - "9091:9090"
+    healthcheck:
+      test: ["CMD", "/grpc_health_probe", "-addr=localhost:9090"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    environment:
+      LOG_LEVEL: debug
+      GRPC_ADDR: ":9090"
+      KAFKA_BROKERS: kafka:9092
+      KAFKA_TOPIC: events
+      KAFKA_GROUP_ID: persistence
+      DATABASE_URL: postgres://egt:events@postgres:5432/challenge?sslmode=disable
+    depends_on:
+      kafka-init:
+        condition: service_completed_successfully
+      postgres-init:
+        condition: service_completed_successfully
+
+volumes:
+  postgres-data:
