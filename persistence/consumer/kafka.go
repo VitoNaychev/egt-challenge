@@ -69,14 +69,19 @@ func (k *KafkaConsumer) Run(ctx context.Context) error {
 			ID:      event.ID,
 			Message: event.Message,
 		})
-		if err != nil {
+		switch {
+		case errors.Is(err, service.ErrEventAlreadyExists):
+			// redelivered event: already persisted, safe to commit and move on
+			logger.Info("duplicate event, skipping", slog.String("id", event.ID))
+		case err != nil:
 			// leave uncommitted so the event is redelivered after restart
 			return fmt.Errorf("store event %s: %w", event.ID, err)
+		default:
+			logger.Debug("stored event", slog.String("id", event.ID))
 		}
 
 		if err := k.reader.CommitMessages(ctx, msg); err != nil {
 			return fmt.Errorf("commit message: %w", err)
 		}
-		logger.Debug("stored event", slog.String("id", event.ID))
 	}
 }

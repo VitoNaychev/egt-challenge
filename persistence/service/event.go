@@ -2,7 +2,6 @@ package service
 
 import (
 	"context"
-	"errors"
 	"fmt"
 )
 
@@ -24,8 +23,7 @@ func NewEventService(repo EventRepository) *EventService {
 }
 
 func (e *EventService) Store(ctx context.Context, event Event) error {
-	err := e.repo.Store(ctx, event)
-	if err != nil && !errors.Is(err, ErrEventAlreadyExists) {
+	if err := e.repo.Store(ctx, event); err != nil {
 		return fmt.Errorf("store event: %w", err)
 	}
 	return nil

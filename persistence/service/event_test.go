@@ -31,7 +31,7 @@ func TestEventService(t *testing.T) {
 		assert.Len(t, repo.StoreCalls(), 1, "did not persist event")
 	})
 
-	t.Run("ignores ErrEventAlreadyExists", func(t *testing.T) {
+	t.Run("propagates ErrEventAlreadyExists", func(t *testing.T) {
 		repo := &EventRepositoryMock{
 			StoreFunc: func(ctx context.Context, got service.Event) error {
 				return service.ErrEventAlreadyExists
@@ -40,7 +40,7 @@ func TestEventService(t *testing.T) {
 		svc := service.NewEventService(repo)
 
 		err := svc.Store(context.Background(), event)
-		require.NoError(t, err)
+		require.ErrorIs(t, err, service.ErrEventAlreadyExists)
 	})
 
 	t.Run("wraps other errors from repository", func(t *testing.T) {
