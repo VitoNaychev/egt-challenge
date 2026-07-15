@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/VitoNaychev/egt-challenge/ingestion/handler"
 	"github.com/VitoNaychev/egt-challenge/ingestion/service"
@@ -17,11 +18,18 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestEventsHandler_CorrelationID(t *testing.T) {
-	handlerEvent := handler.Event{
-		ID:      "example-id",
-		Message: "hello, world",
+func validEvent() handler.Event {
+	return handler.Event{
+		ID:        "example-id",
+		SessionID: "example-session",
+		Type:      "example-type",
+		Message:   "hello, world",
+		Timestamp: time.Date(2026, 7, 15, 12, 0, 0, 0, time.UTC),
 	}
+}
+
+func TestEventsHandler_CorrelationID(t *testing.T) {
+	handlerEvent := validEvent()
 	eventJSON, err := json.Marshal(handlerEvent)
 	require.NoError(t, err, "failed to marshal event")
 
@@ -81,10 +89,7 @@ func TestEventsHandler_CorrelationID(t *testing.T) {
 }
 
 func TestEventsHandler_MethodValidation(t *testing.T) {
-	handlerEvent := handler.Event{
-		ID:      "example-id",
-		Message: "hello, world",
-	}
+	handlerEvent := validEvent()
 	eventJSON, err := json.Marshal(handlerEvent)
 	require.NoError(t, err, "failed to marshal event")
 
@@ -144,13 +149,13 @@ func TestEventHandler_RequestValidation(t *testing.T) {
 }
 
 func TestEventHandler_ServiceCases(t *testing.T) {
+	handlerEvent := validEvent()
 	want := service.Event{
-		ID:      "example-id",
-		Message: "hello, world!",
-	}
-	handlerEvent := handler.Event{
-		ID:      want.ID,
-		Message: want.Message,
+		ID:        handlerEvent.ID,
+		SessionID: handlerEvent.SessionID,
+		Type:      handlerEvent.Type,
+		Message:   handlerEvent.Message,
+		Timestamp: handlerEvent.Timestamp,
 	}
 	eventJSON, err := json.Marshal(handlerEvent)
 	require.NoError(t, err, "failed to marshal event")

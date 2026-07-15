@@ -19,8 +19,11 @@ func TestEventRepo(t *testing.T) {
 	repo := repo.NewEventRepository(pool)
 
 	event := service.Event{
-		ID:      "example-id",
-		Message: "hello, world",
+		ID:        "example-id",
+		SessionID: "example-session",
+		Type:      "example-type",
+		Message:   "hello, world",
+		Timestamp: time.Date(2026, 7, 15, 12, 0, 0, 0, time.UTC),
 	}
 
 	ctx, cancel := context.WithTimeout(t.Context(), 30*time.Second)
@@ -34,7 +37,7 @@ func TestEventRepo(t *testing.T) {
 	got, err := repo.Get(ctx, event.ID)
 	require.NoError(t, err)
 
-	assert.Equal(t, event, got)
+	assert.Equal(t, event, normalizeTimestamp(got))
 
 	// try store same event
 	err = repo.Store(ctx, event)
@@ -45,8 +48,11 @@ func TestEventRepo(t *testing.T) {
 	require.ErrorIs(t, err, service.ErrEventNotFound)
 
 	second := service.Event{
-		ID:      "second-id",
-		Message: "goodbye, world",
+		ID:        "second-id",
+		SessionID: "second-session",
+		Type:      "second-type",
+		Message:   "goodbye, world",
+		Timestamp: time.Date(2026, 7, 15, 13, 0, 0, 0, time.UTC),
 	}
 
 	// store second event
@@ -57,6 +63,17 @@ func TestEventRepo(t *testing.T) {
 	events, err := repo.List(ctx)
 	require.NoError(t, err)
 
+	for i, e := range events {
+		events[i] = normalizeTimestamp(e)
+	}
 	assert.Contains(t, events, event)
 	assert.Contains(t, events, second)
+}
+
+// normalizeTimestamp converts the timestamp to UTC: postgres returns
+// TIMESTAMPTZ in the session time zone, which breaks struct equality
+// even when the instant is the same.
+func normalizeTimestamp(e service.Event) service.Event {
+	e.Timestamp = e.Timestamp.UTC()
+	return e
 }

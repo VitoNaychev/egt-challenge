@@ -9,6 +9,7 @@ import (
 	"github.com/VitoNaychev/egt-challenge/persistence/service"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 //go:generate moq --pkg grpc_test -out event_mock_test.go . EventService
@@ -67,7 +68,10 @@ func (e *EventHandler) List(ctx context.Context, req *eventpb.ListRequest) (*eve
 
 func eventToPb(e service.Event) *eventpb.Event {
 	return &eventpb.Event{
-		Id:      e.ID,
-		Message: e.Message,
+		Id:        e.ID,
+		SessionId: e.SessionID,
+		Type:      e.Type,
+		Message:   e.Message,
+		Timestamp: timestamppb.New(e.Timestamp),
 	}
 }

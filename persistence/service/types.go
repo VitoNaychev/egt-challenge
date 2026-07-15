@@ -1,6 +1,9 @@
 package service
 
-import "errors"
+import (
+	"errors"
+	"time"
+)
 
 var (
 	ErrEventAlreadyExists = errors.New("event already exists")
@@ -8,6 +11,9 @@ var (
 )
 
 type Event struct {
-	ID      string
-	Message string
+	ID        string
+	SessionID string
+	Type      string
+	Message   string
+	Timestamp time.Time
 }

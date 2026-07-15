@@ -49,8 +49,8 @@ pkg/
 
 ## Service A — Ingestion
 
-- `POST /events` accepts a JSON payload; all fields are required (validated with `go-playground/validator`). Malformed JSON or a failed validation returns `400 Bad Request`.
-- Valid events are published to Kafka keyed by event ID (hash balancer, `RequiredAcks: all`), and the client receives `202 Accepted`.
+- `POST /events` accepts a JSON payload with five fields — `id`, `session_id`, `type`, `message`, `timestamp` (RFC 3339) — all required (validated with `go-playground/validator`). Malformed JSON or a failed validation returns `400 Bad Request`.
+- Valid events are published to Kafka **keyed by `session_id`** (hash balancer, `RequiredAcks: all`), and the client receives `202 Accepted`. Keying by session pins all events of one session to one partition, so they preserve their relative order through the pipeline — while the event `id` stays the uniqueness/idempotency key at the database.
 - Publish failures are mapped to meaningful responses: a publish timeout returns `503 Service Unavailable`, other failures `500 Internal Server Error`.
 - A gRPC server exposes the standard [gRPC health checking protocol](https://grpc.io/docs/guides/health-checking/), used by the container health checks.
 

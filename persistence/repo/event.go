@@ -49,11 +49,11 @@ func (e *EventRepository) Store(ctx context.Context, event service.Event) error 
 	defer cancel()
 
 	query := `
-		INSERT INTO events (id, message)
-		VALUES ($1, $2)
+		INSERT INTO events (id, session_id, type, message, timestamp)
+		VALUES ($1, $2, $3, $4, $5)
 	`
 
-	_, err := e.pool.Exec(ctx, query, event.ID, event.Message)
+	_, err := e.pool.Exec(ctx, query, event.ID, event.SessionID, event.Type, event.Message, event.Timestamp)
 	if err != nil {
 		var pgErr *pgconn.PgError
 		if errors.As(err, &pgErr) && pgErr.Code == uniqueViolationCode {
@@ -68,7 +68,7 @@ func (e *EventRepository) Get(ctx context.Context, id string) (service.Event, er
 	ctx, cancel := context.WithTimeout(ctx, e.timeout)
 	defer cancel()
 
-	query := `SELECT id, message FROM events WHERE id = $1`
+	query := `SELECT id, session_id, type, message, timestamp FROM events WHERE id = $1`
 
 	rows, err := e.pool.Query(ctx, query, id)
 	if err != nil {
@@ -88,7 +88,7 @@ func (e *EventRepository) List(ctx context.Context) ([]service.Event, error) {
 	ctx, cancel := context.WithTimeout(ctx, e.timeout)
 	defer cancel()
 
-	query := `SELECT id, message FROM events`
+	query := `SELECT id, session_id, type, message, timestamp FROM events`
 
 	rows, err := e.pool.Query(ctx, query)
 	if err != nil {
@@ -108,7 +108,10 @@ func (e *EventRepository) List(ctx context.Context) ([]service.Event, error) {
 
 func toDomainEvent(m EventModel) service.Event {
 	return service.Event{
-		ID:      m.ID,
-		Message: m.Message,
+		ID:        m.ID,
+		SessionID: m.SessionID,
+		Type:      m.Type,
+		Message:   m.Message,
+		Timestamp: m.Timestamp,
 	}
 }

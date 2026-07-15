@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"testing"
+	"time"
 
 	"github.com/VitoNaychev/egt-challenge/ingestion/service"
 	"github.com/stretchr/testify/assert"
@@ -12,8 +13,11 @@ import (
 
 func TestPublish(t *testing.T) {
 	want := service.Event{
-		ID:      "example-id",
-		Message: "hello, world",
+		ID:        "example-id",
+		SessionID: "example-session",
+		Type:      "example-type",
+		Message:   "hello, world",
+		Timestamp: time.Date(2026, 7, 15, 12, 0, 0, 0, time.UTC),
 	}
 
 	t.Run("publishes event to topic", func(t *testing.T) {

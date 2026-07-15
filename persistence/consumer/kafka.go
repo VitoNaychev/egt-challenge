@@ -66,8 +66,11 @@ func (k *KafkaConsumer) Run(ctx context.Context) error {
 		}
 
 		err = k.svc.Store(ctx, service.Event{
-			ID:      event.ID,
-			Message: event.Message,
+			ID:        event.ID,
+			SessionID: event.SessionID,
+			Type:      event.Type,
+			Message:   event.Message,
+			Timestamp: event.Timestamp,
 		})
 		switch {
 		case errors.Is(err, service.ErrEventAlreadyExists):

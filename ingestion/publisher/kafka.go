@@ -56,8 +56,11 @@ func (k *KafkaPublisher) Publish(ctx context.Context, event service.Event) error
 	}
 
 	value, err := json.Marshal(Event{
-		ID:      event.ID,
-		Message: event.Message,
+		ID:        event.ID,
+		SessionID: event.SessionID,
+		Type:      event.Type,
+		Message:   event.Message,
+		Timestamp: event.Timestamp,
 	})
 	if err != nil {
 		return fmt.Errorf("json marshal: %w", err)
@@ -68,7 +71,9 @@ func (k *KafkaPublisher) Publish(ctx context.Context, event service.Event) error
 
 	err = k.writer.WriteMessages(ctx,
 		kafka.Message{
-			Key:     []byte(event.ID),
+			// keyed by session so events from the same session land
+			// on the same partition and keep their relative order
+			Key:     []byte(event.SessionID),
 			Value:   value,
 			Headers: headers,
 		},

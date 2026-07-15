@@ -1,6 +1,9 @@
 package service
 
-import "errors"
+import (
+	"errors"
+	"time"
+)
 
 var (
 	ErrPublishTimeout    = errors.New("failed to publish event due to timeout")
@@ -9,6 +12,9 @@ var (
 )
 
 type Event struct {
-	ID      string
-	Message string
+	ID        string
+	SessionID string
+	Type      string
+	Message   string
+	Timestamp time.Time
 }

@@ -4,6 +4,8 @@ package event;
 
 option go_package = "github.com/VitoNaychev/egt-challenge/persistence/gen;eventpb";
 
+import "google/protobuf/timestamp.proto";
+
 service EventService {
   rpc Get (GetRequest) returns (GetResponse);
   rpc List (ListRequest) returns (ListResponse);
@@ -11,7 +13,10 @@ service EventService {
 
 message Event {
   string id = 1;
-  string message = 2;
+  string session_id = 2;
+  string type = 3;
+  string message = 4;
+  google.protobuf.Timestamp timestamp = 5;
 }
 
 message GetRequest {

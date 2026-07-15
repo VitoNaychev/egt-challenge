@@ -5,6 +5,7 @@ import (
 	"errors"
 	"log/slog"
 	"testing"
+	"time"
 
 	eventpb "github.com/VitoNaychev/egt-challenge/persistence/gen"
 	handler "github.com/VitoNaychev/egt-challenge/persistence/grpc"
@@ -17,8 +18,11 @@ import (
 
 func TestEventHandlerGet(t *testing.T) {
 	event := service.Event{
-		ID:      "example-id",
-		Message: "hello, world",
+		ID:        "example-id",
+		SessionID: "example-session",
+		Type:      "example-type",
+		Message:   "hello, world",
+		Timestamp: time.Date(2026, 7, 15, 12, 0, 0, 0, time.UTC),
 	}
 
 	t.Run("returns event", func(t *testing.T) {
@@ -34,7 +38,10 @@ func TestEventHandlerGet(t *testing.T) {
 		require.NoError(t, err)
 
 		assert.Equal(t, event.ID, resp.GetEvent().GetId())
+		assert.Equal(t, event.SessionID, resp.GetEvent().GetSessionId())
+		assert.Equal(t, event.Type, resp.GetEvent().GetType())
 		assert.Equal(t, event.Message, resp.GetEvent().GetMessage())
+		assert.Equal(t, event.Timestamp, resp.GetEvent().GetTimestamp().AsTime())
 	})
 
 	t.Run("returns InvalidArgument on empty id", func(t *testing.T) {

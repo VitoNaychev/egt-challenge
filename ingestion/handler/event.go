@@ -65,8 +65,11 @@ func (e *EventHandler) handleEvent(w http.ResponseWriter, r *http.Request) {
 	eventLogger := requestLogger.With(slog.String("event_id", event.ID))
 
 	err = e.svc.Publish(ctx, service.Event{
-		ID:      event.ID,
-		Message: event.Message,
+		ID:        event.ID,
+		SessionID: event.SessionID,
+		Type:      event.Type,
+		Message:   event.Message,
+		Timestamp: event.Timestamp,
 	})
 	if err != nil {
 		if errors.Is(err, service.ErrPublishTimeout) {

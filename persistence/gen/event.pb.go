@@ -9,6 +9,7 @@ package eventpb
 import (
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
+	timestamppb "google.golang.org/protobuf/types/known/timestamppb"
 	reflect "reflect"
 	sync "sync"
 	unsafe "unsafe"
@@ -24,7 +25,10 @@ const (
 type Event struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	Message       string                 `protobuf:"bytes,2,opt,name=message,proto3" json:"message,omitempty"`
+	SessionId     string                 `protobuf:"bytes,2,opt,name=session_id,json=sessionId,proto3" json:"session_id,omitempty"`
+	Type          string                 `protobuf:"bytes,3,opt,name=type,proto3" json:"type,omitempty"`
+	Message       string                 `protobuf:"bytes,4,opt,name=message,proto3" json:"message,omitempty"`
+	Timestamp     *timestamppb.Timestamp `protobuf:"bytes,5,opt,name=timestamp,proto3" json:"timestamp,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -66,11 +70,32 @@ func (x *Event) GetId() string {
 	return ""
 }
 
+func (x *Event) GetSessionId() string {
+	if x != nil {
+		return x.SessionId
+	}
+	return ""
+}
+
+func (x *Event) GetType() string {
+	if x != nil {
+		return x.Type
+	}
+	return ""
+}
+
 func (x *Event) GetMessage() string {
 	if x != nil {
 		return x.Message
 	}
 	return ""
+}
+
+func (x *Event) GetTimestamp() *timestamppb.Timestamp {
+	if x != nil {
+		return x.Timestamp
+	}
+	return nil
 }
 
 type GetRequest struct {
@@ -245,10 +270,14 @@ var File_persistence_proto_event_proto protoreflect.FileDescriptor
 
 const file_persistence_proto_event_proto_rawDesc = "" +
 	"\n" +
-	"\x1dpersistence/proto/event.proto\x12\x05event\"1\n" +
+	"\x1dpersistence/proto/event.proto\x12\x05event\x1a\x1fgoogle/protobuf/timestamp.proto\"\x9e\x01\n" +
 	"\x05Event\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\tR\x02id\x12\x18\n" +
-	"\amessage\x18\x02 \x01(\tR\amessage\"\x1c\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1d\n" +
+	"\n" +
+	"session_id\x18\x02 \x01(\tR\tsessionId\x12\x12\n" +
+	"\x04type\x18\x03 \x01(\tR\x04type\x12\x18\n" +
+	"\amessage\x18\x04 \x01(\tR\amessage\x128\n" +
+	"\ttimestamp\x18\x05 \x01(\v2\x1a.google.protobuf.TimestampR\ttimestamp\"\x1c\n" +
 	"\n" +
 	"GetRequest\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\"1\n" +
@@ -275,24 +304,26 @@ func file_persistence_proto_event_proto_rawDescGZIP() []byte {
 
 var file_persistence_proto_event_proto_msgTypes = make([]protoimpl.MessageInfo, 5)
 var file_persistence_proto_event_proto_goTypes = []any{
-	(*Event)(nil),        // 0: event.Event
-	(*GetRequest)(nil),   // 1: event.GetRequest
-	(*GetResponse)(nil),  // 2: event.GetResponse
-	(*ListRequest)(nil),  // 3: event.ListRequest
-	(*ListResponse)(nil), // 4: event.ListResponse
+	(*Event)(nil),                 // 0: event.Event
+	(*GetRequest)(nil),            // 1: event.GetRequest
+	(*GetResponse)(nil),           // 2: event.GetResponse
+	(*ListRequest)(nil),           // 3: event.ListRequest
+	(*ListResponse)(nil),          // 4: event.ListResponse
+	(*timestamppb.Timestamp)(nil), // 5: google.protobuf.Timestamp
 }
 var file_persistence_proto_event_proto_depIdxs = []int32{
-	0, // 0: event.GetResponse.event:type_name -> event.Event
-	0, // 1: event.ListResponse.events:type_name -> event.Event
-	1, // 2: event.EventService.Get:input_type -> event.GetRequest
-	3, // 3: event.EventService.List:input_type -> event.ListRequest
-	2, // 4: event.EventService.Get:output_type -> event.GetResponse
-	4, // 5: event.EventService.List:output_type -> event.ListResponse
-	4, // [4:6] is the sub-list for method output_type
-	2, // [2:4] is the sub-list for method input_type
-	2, // [2:2] is the sub-list for extension type_name
-	2, // [2:2] is the sub-list for extension extendee
-	0, // [0:2] is the sub-list for field type_name
+	5, // 0: event.Event.timestamp:type_name -> google.protobuf.Timestamp
+	0, // 1: event.GetResponse.event:type_name -> event.Event
+	0, // 2: event.ListResponse.events:type_name -> event.Event
+	1, // 3: event.EventService.Get:input_type -> event.GetRequest
+	3, // 4: event.EventService.List:input_type -> event.ListRequest
+	2, // 5: event.EventService.Get:output_type -> event.GetResponse
+	4, // 6: event.EventService.List:output_type -> event.ListResponse
+	5, // [5:7] is the sub-list for method output_type
+	3, // [3:5] is the sub-list for method input_type
+	3, // [3:3] is the sub-list for extension type_name
+	3, // [3:3] is the sub-list for extension extendee
+	0, // [0:3] is the sub-list for field type_name
 }
 
 func init() { file_persistence_proto_event_proto_init() }
