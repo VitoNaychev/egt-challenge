@@ -2,9 +2,9 @@
 // versions:
 // - protoc-gen-go-grpc v1.6.2
 // - protoc             v6.33.4
-// source: persistence/proto/event.proto
+// source: persistence/proto/event_service.proto
 
-package eventpb
+package eventsvcpb
 
 import (
 	context "context"
@@ -19,8 +19,8 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	EventService_Get_FullMethodName  = "/event.EventService/Get"
-	EventService_List_FullMethodName = "/event.EventService/List"
+	EventService_Get_FullMethodName  = "/eventservice.EventService/Get"
+	EventService_List_FullMethodName = "/eventservice.EventService/List"
 )
 
 // EventServiceClient is the client API for EventService service.
@@ -142,7 +142,7 @@ func _EventService_List_Handler(srv interface{}, ctx context.Context, dec func(i
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
 var EventService_ServiceDesc = grpc.ServiceDesc{
-	ServiceName: "event.EventService",
+	ServiceName: "eventservice.EventService",
 	HandlerType: (*EventServiceServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{
@@ -155,5 +155,5 @@ var EventService_ServiceDesc = grpc.ServiceDesc{
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
-	Metadata: "persistence/proto/event.proto",
+	Metadata: "persistence/proto/event_service.proto",
 }

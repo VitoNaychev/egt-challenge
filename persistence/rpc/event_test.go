@@ -1,4 +1,4 @@
-package grpc_test
+package rpc_test
 
 import (
 	"context"
@@ -7,8 +7,8 @@ import (
 	"testing"
 	"time"
 
-	eventpb "github.com/VitoNaychev/egt-challenge/persistence/gen"
-	handler "github.com/VitoNaychev/egt-challenge/persistence/grpc"
+	eventsvcpb "github.com/VitoNaychev/egt-challenge/persistence/gen"
+	"github.com/VitoNaychev/egt-challenge/persistence/rpc"
 	"github.com/VitoNaychev/egt-challenge/persistence/service"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -32,9 +32,9 @@ func TestEventHandlerGet(t *testing.T) {
 				return event, nil
 			},
 		}
-		h := handler.NewEventHandler(svc, slog.New(slog.DiscardHandler))
+		h := rpc.NewEventHandler(svc, slog.New(slog.DiscardHandler))
 
-		resp, err := h.Get(context.Background(), &eventpb.GetRequest{Id: event.ID})
+		resp, err := h.Get(context.Background(), &eventsvcpb.GetRequest{Id: event.ID})
 		require.NoError(t, err)
 
 		assert.Equal(t, event.ID, resp.GetEvent().GetId())
@@ -46,9 +46,9 @@ func TestEventHandlerGet(t *testing.T) {
 
 	t.Run("returns InvalidArgument on empty id", func(t *testing.T) {
 		svc := &EventServiceMock{}
-		h := handler.NewEventHandler(svc, slog.New(slog.DiscardHandler))
+		h := rpc.NewEventHandler(svc, slog.New(slog.DiscardHandler))
 
-		_, err := h.Get(context.Background(), &eventpb.GetRequest{})
+		_, err := h.Get(context.Background(), &eventsvcpb.GetRequest{})
 		require.Error(t, err)
 
 		assert.Equal(t, codes.InvalidArgument, status.Code(err))
@@ -61,9 +61,9 @@ func TestEventHandlerGet(t *testing.T) {
 				return service.Event{}, service.ErrEventNotFound
 			},
 		}
-		h := handler.NewEventHandler(svc, slog.New(slog.DiscardHandler))
+		h := rpc.NewEventHandler(svc, slog.New(slog.DiscardHandler))
 
-		_, err := h.Get(context.Background(), &eventpb.GetRequest{Id: event.ID})
+		_, err := h.Get(context.Background(), &eventsvcpb.GetRequest{Id: event.ID})
 		require.Error(t, err)
 
 		assert.Equal(t, codes.NotFound, status.Code(err))
@@ -75,9 +75,9 @@ func TestEventHandlerGet(t *testing.T) {
 				return service.Event{}, errors.New("example error")
 			},
 		}
-		h := handler.NewEventHandler(svc, slog.New(slog.DiscardHandler))
+		h := rpc.NewEventHandler(svc, slog.New(slog.DiscardHandler))
 
-		_, err := h.Get(context.Background(), &eventpb.GetRequest{Id: event.ID})
+		_, err := h.Get(context.Background(), &eventsvcpb.GetRequest{Id: event.ID})
 		require.Error(t, err)
 
 		assert.Equal(t, codes.Internal, status.Code(err))
@@ -96,9 +96,9 @@ func TestEventHandlerList(t *testing.T) {
 				return events, nil
 			},
 		}
-		h := handler.NewEventHandler(svc, slog.New(slog.DiscardHandler))
+		h := rpc.NewEventHandler(svc, slog.New(slog.DiscardHandler))
 
-		resp, err := h.List(context.Background(), &eventpb.ListRequest{})
+		resp, err := h.List(context.Background(), &eventsvcpb.ListRequest{})
 		require.NoError(t, err)
 
 		require.Len(t, resp.GetEvents(), len(events))
@@ -114,9 +114,9 @@ func TestEventHandlerList(t *testing.T) {
 				return nil, nil
 			},
 		}
-		h := handler.NewEventHandler(svc, slog.New(slog.DiscardHandler))
+		h := rpc.NewEventHandler(svc, slog.New(slog.DiscardHandler))
 
-		resp, err := h.List(context.Background(), &eventpb.ListRequest{})
+		resp, err := h.List(context.Background(), &eventsvcpb.ListRequest{})
 		require.NoError(t, err)
 
 		assert.Empty(t, resp.GetEvents())
@@ -128,9 +128,9 @@ func TestEventHandlerList(t *testing.T) {
 				return nil, errors.New("example error")
 			},
 		}
-		h := handler.NewEventHandler(svc, slog.New(slog.DiscardHandler))
+		h := rpc.NewEventHandler(svc, slog.New(slog.DiscardHandler))
 
-		_, err := h.List(context.Background(), &eventpb.ListRequest{})
+		_, err := h.List(context.Background(), &eventsvcpb.ListRequest{})
 		require.Error(t, err)
 
 		assert.Equal(t, codes.Internal, status.Code(err))

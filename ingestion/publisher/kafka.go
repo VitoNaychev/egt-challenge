@@ -2,7 +2,6 @@ package publisher
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"net"
@@ -10,7 +9,10 @@ import (
 
 	"github.com/VitoNaychev/egt-challenge/ingestion/service"
 	"github.com/VitoNaychev/egt-challenge/pkg/correlation"
+	eventpb "github.com/VitoNaychev/egt-challenge/pkg/gen"
 	"github.com/segmentio/kafka-go"
+	"google.golang.org/protobuf/proto"
+	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 const (
@@ -55,15 +57,15 @@ func (k *KafkaPublisher) Publish(ctx context.Context, event service.Event) error
 		})
 	}
 
-	value, err := json.Marshal(Event{
-		ID:        event.ID,
-		SessionID: event.SessionID,
+	value, err := proto.Marshal(&eventpb.Event{
+		Id:        event.ID,
+		SessionId: event.SessionID,
 		Type:      event.Type,
 		Message:   event.Message,
-		Timestamp: event.Timestamp,
+		Timestamp: timestamppb.New(event.Timestamp),
 	})
 	if err != nil {
-		return fmt.Errorf("json marshal: %w", err)
+		return fmt.Errorf("proto marshal: %w", err)
 	}
 
 	ctx, cancel := context.WithTimeout(ctx, k.timeout)

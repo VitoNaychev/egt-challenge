@@ -2,9 +2,9 @@
 // versions:
 // 	protoc-gen-go v1.36.11
 // 	protoc        v6.33.4
-// source: persistence/proto/event.proto
+// source: persistence/proto/event_service.proto
 
-package eventpb
+package eventsvcpb
 
 import (
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
@@ -35,7 +35,7 @@ type Event struct {
 
 func (x *Event) Reset() {
 	*x = Event{}
-	mi := &file_persistence_proto_event_proto_msgTypes[0]
+	mi := &file_persistence_proto_event_service_proto_msgTypes[0]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -47,7 +47,7 @@ func (x *Event) String() string {
 func (*Event) ProtoMessage() {}
 
 func (x *Event) ProtoReflect() protoreflect.Message {
-	mi := &file_persistence_proto_event_proto_msgTypes[0]
+	mi := &file_persistence_proto_event_service_proto_msgTypes[0]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -60,7 +60,7 @@ func (x *Event) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Event.ProtoReflect.Descriptor instead.
 func (*Event) Descriptor() ([]byte, []int) {
-	return file_persistence_proto_event_proto_rawDescGZIP(), []int{0}
+	return file_persistence_proto_event_service_proto_rawDescGZIP(), []int{0}
 }
 
 func (x *Event) GetId() string {
@@ -107,7 +107,7 @@ type GetRequest struct {
 
 func (x *GetRequest) Reset() {
 	*x = GetRequest{}
-	mi := &file_persistence_proto_event_proto_msgTypes[1]
+	mi := &file_persistence_proto_event_service_proto_msgTypes[1]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -119,7 +119,7 @@ func (x *GetRequest) String() string {
 func (*GetRequest) ProtoMessage() {}
 
 func (x *GetRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_persistence_proto_event_proto_msgTypes[1]
+	mi := &file_persistence_proto_event_service_proto_msgTypes[1]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -132,7 +132,7 @@ func (x *GetRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetRequest.ProtoReflect.Descriptor instead.
 func (*GetRequest) Descriptor() ([]byte, []int) {
-	return file_persistence_proto_event_proto_rawDescGZIP(), []int{1}
+	return file_persistence_proto_event_service_proto_rawDescGZIP(), []int{1}
 }
 
 func (x *GetRequest) GetId() string {
@@ -151,7 +151,7 @@ type GetResponse struct {
 
 func (x *GetResponse) Reset() {
 	*x = GetResponse{}
-	mi := &file_persistence_proto_event_proto_msgTypes[2]
+	mi := &file_persistence_proto_event_service_proto_msgTypes[2]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -163,7 +163,7 @@ func (x *GetResponse) String() string {
 func (*GetResponse) ProtoMessage() {}
 
 func (x *GetResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_persistence_proto_event_proto_msgTypes[2]
+	mi := &file_persistence_proto_event_service_proto_msgTypes[2]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -176,7 +176,7 @@ func (x *GetResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetResponse.ProtoReflect.Descriptor instead.
 func (*GetResponse) Descriptor() ([]byte, []int) {
-	return file_persistence_proto_event_proto_rawDescGZIP(), []int{2}
+	return file_persistence_proto_event_service_proto_rawDescGZIP(), []int{2}
 }
 
 func (x *GetResponse) GetEvent() *Event {
@@ -194,7 +194,7 @@ type ListRequest struct {
 
 func (x *ListRequest) Reset() {
 	*x = ListRequest{}
-	mi := &file_persistence_proto_event_proto_msgTypes[3]
+	mi := &file_persistence_proto_event_service_proto_msgTypes[3]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -206,7 +206,7 @@ func (x *ListRequest) String() string {
 func (*ListRequest) ProtoMessage() {}
 
 func (x *ListRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_persistence_proto_event_proto_msgTypes[3]
+	mi := &file_persistence_proto_event_service_proto_msgTypes[3]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -219,7 +219,7 @@ func (x *ListRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListRequest.ProtoReflect.Descriptor instead.
 func (*ListRequest) Descriptor() ([]byte, []int) {
-	return file_persistence_proto_event_proto_rawDescGZIP(), []int{3}
+	return file_persistence_proto_event_service_proto_rawDescGZIP(), []int{3}
 }
 
 type ListResponse struct {
@@ -231,7 +231,7 @@ type ListResponse struct {
 
 func (x *ListResponse) Reset() {
 	*x = ListResponse{}
-	mi := &file_persistence_proto_event_proto_msgTypes[4]
+	mi := &file_persistence_proto_event_service_proto_msgTypes[4]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -243,7 +243,7 @@ func (x *ListResponse) String() string {
 func (*ListResponse) ProtoMessage() {}
 
 func (x *ListResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_persistence_proto_event_proto_msgTypes[4]
+	mi := &file_persistence_proto_event_service_proto_msgTypes[4]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -256,7 +256,7 @@ func (x *ListResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListResponse.ProtoReflect.Descriptor instead.
 func (*ListResponse) Descriptor() ([]byte, []int) {
-	return file_persistence_proto_event_proto_rawDescGZIP(), []int{4}
+	return file_persistence_proto_event_service_proto_rawDescGZIP(), []int{4}
 }
 
 func (x *ListResponse) GetEvents() []*Event {
@@ -266,11 +266,11 @@ func (x *ListResponse) GetEvents() []*Event {
 	return nil
 }
 
-var File_persistence_proto_event_proto protoreflect.FileDescriptor
+var File_persistence_proto_event_service_proto protoreflect.FileDescriptor
 
-const file_persistence_proto_event_proto_rawDesc = "" +
+const file_persistence_proto_event_service_proto_rawDesc = "" +
 	"\n" +
-	"\x1dpersistence/proto/event.proto\x12\x05event\x1a\x1fgoogle/protobuf/timestamp.proto\"\x9e\x01\n" +
+	"%persistence/proto/event_service.proto\x12\feventservice\x1a\x1fgoogle/protobuf/timestamp.proto\"\x9e\x01\n" +
 	"\x05Event\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1d\n" +
 	"\n" +
@@ -280,45 +280,45 @@ const file_persistence_proto_event_proto_rawDesc = "" +
 	"\ttimestamp\x18\x05 \x01(\v2\x1a.google.protobuf.TimestampR\ttimestamp\"\x1c\n" +
 	"\n" +
 	"GetRequest\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\tR\x02id\"1\n" +
-	"\vGetResponse\x12\"\n" +
-	"\x05event\x18\x01 \x01(\v2\f.event.EventR\x05event\"\r\n" +
-	"\vListRequest\"4\n" +
-	"\fListResponse\x12$\n" +
-	"\x06events\x18\x01 \x03(\v2\f.event.EventR\x06events2m\n" +
-	"\fEventService\x12,\n" +
-	"\x03Get\x12\x11.event.GetRequest\x1a\x12.event.GetResponse\x12/\n" +
-	"\x04List\x12\x12.event.ListRequest\x1a\x13.event.ListResponseB>Z<github.com/VitoNaychev/egt-challenge/persistence/gen;eventpbb\x06proto3"
+	"\x02id\x18\x01 \x01(\tR\x02id\"8\n" +
+	"\vGetResponse\x12)\n" +
+	"\x05event\x18\x01 \x01(\v2\x13.eventservice.EventR\x05event\"\r\n" +
+	"\vListRequest\";\n" +
+	"\fListResponse\x12+\n" +
+	"\x06events\x18\x01 \x03(\v2\x13.eventservice.EventR\x06events2\x89\x01\n" +
+	"\fEventService\x12:\n" +
+	"\x03Get\x12\x18.eventservice.GetRequest\x1a\x19.eventservice.GetResponse\x12=\n" +
+	"\x04List\x12\x19.eventservice.ListRequest\x1a\x1a.eventservice.ListResponseBAZ?github.com/VitoNaychev/egt-challenge/persistence/gen;eventsvcpbb\x06proto3"
 
 var (
-	file_persistence_proto_event_proto_rawDescOnce sync.Once
-	file_persistence_proto_event_proto_rawDescData []byte
+	file_persistence_proto_event_service_proto_rawDescOnce sync.Once
+	file_persistence_proto_event_service_proto_rawDescData []byte
 )
 
-func file_persistence_proto_event_proto_rawDescGZIP() []byte {
-	file_persistence_proto_event_proto_rawDescOnce.Do(func() {
-		file_persistence_proto_event_proto_rawDescData = protoimpl.X.CompressGZIP(unsafe.Slice(unsafe.StringData(file_persistence_proto_event_proto_rawDesc), len(file_persistence_proto_event_proto_rawDesc)))
+func file_persistence_proto_event_service_proto_rawDescGZIP() []byte {
+	file_persistence_proto_event_service_proto_rawDescOnce.Do(func() {
+		file_persistence_proto_event_service_proto_rawDescData = protoimpl.X.CompressGZIP(unsafe.Slice(unsafe.StringData(file_persistence_proto_event_service_proto_rawDesc), len(file_persistence_proto_event_service_proto_rawDesc)))
 	})
-	return file_persistence_proto_event_proto_rawDescData
+	return file_persistence_proto_event_service_proto_rawDescData
 }
 
-var file_persistence_proto_event_proto_msgTypes = make([]protoimpl.MessageInfo, 5)
-var file_persistence_proto_event_proto_goTypes = []any{
-	(*Event)(nil),                 // 0: event.Event
-	(*GetRequest)(nil),            // 1: event.GetRequest
-	(*GetResponse)(nil),           // 2: event.GetResponse
-	(*ListRequest)(nil),           // 3: event.ListRequest
-	(*ListResponse)(nil),          // 4: event.ListResponse
+var file_persistence_proto_event_service_proto_msgTypes = make([]protoimpl.MessageInfo, 5)
+var file_persistence_proto_event_service_proto_goTypes = []any{
+	(*Event)(nil),                 // 0: eventservice.Event
+	(*GetRequest)(nil),            // 1: eventservice.GetRequest
+	(*GetResponse)(nil),           // 2: eventservice.GetResponse
+	(*ListRequest)(nil),           // 3: eventservice.ListRequest
+	(*ListResponse)(nil),          // 4: eventservice.ListResponse
 	(*timestamppb.Timestamp)(nil), // 5: google.protobuf.Timestamp
 }
-var file_persistence_proto_event_proto_depIdxs = []int32{
-	5, // 0: event.Event.timestamp:type_name -> google.protobuf.Timestamp
-	0, // 1: event.GetResponse.event:type_name -> event.Event
-	0, // 2: event.ListResponse.events:type_name -> event.Event
-	1, // 3: event.EventService.Get:input_type -> event.GetRequest
-	3, // 4: event.EventService.List:input_type -> event.ListRequest
-	2, // 5: event.EventService.Get:output_type -> event.GetResponse
-	4, // 6: event.EventService.List:output_type -> event.ListResponse
+var file_persistence_proto_event_service_proto_depIdxs = []int32{
+	5, // 0: eventservice.Event.timestamp:type_name -> google.protobuf.Timestamp
+	0, // 1: eventservice.GetResponse.event:type_name -> eventservice.Event
+	0, // 2: eventservice.ListResponse.events:type_name -> eventservice.Event
+	1, // 3: eventservice.EventService.Get:input_type -> eventservice.GetRequest
+	3, // 4: eventservice.EventService.List:input_type -> eventservice.ListRequest
+	2, // 5: eventservice.EventService.Get:output_type -> eventservice.GetResponse
+	4, // 6: eventservice.EventService.List:output_type -> eventservice.ListResponse
 	5, // [5:7] is the sub-list for method output_type
 	3, // [3:5] is the sub-list for method input_type
 	3, // [3:3] is the sub-list for extension type_name
@@ -326,26 +326,26 @@ var file_persistence_proto_event_proto_depIdxs = []int32{
 	0, // [0:3] is the sub-list for field type_name
 }
 
-func init() { file_persistence_proto_event_proto_init() }
-func file_persistence_proto_event_proto_init() {
-	if File_persistence_proto_event_proto != nil {
+func init() { file_persistence_proto_event_service_proto_init() }
+func file_persistence_proto_event_service_proto_init() {
+	if File_persistence_proto_event_service_proto != nil {
 		return
 	}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
-			RawDescriptor: unsafe.Slice(unsafe.StringData(file_persistence_proto_event_proto_rawDesc), len(file_persistence_proto_event_proto_rawDesc)),
+			RawDescriptor: unsafe.Slice(unsafe.StringData(file_persistence_proto_event_service_proto_rawDesc), len(file_persistence_proto_event_service_proto_rawDesc)),
 			NumEnums:      0,
 			NumMessages:   5,
 			NumExtensions: 0,
 			NumServices:   1,
 		},
-		GoTypes:           file_persistence_proto_event_proto_goTypes,
-		DependencyIndexes: file_persistence_proto_event_proto_depIdxs,
-		MessageInfos:      file_persistence_proto_event_proto_msgTypes,
+		GoTypes:           file_persistence_proto_event_service_proto_goTypes,
+		DependencyIndexes: file_persistence_proto_event_service_proto_depIdxs,
+		MessageInfos:      file_persistence_proto_event_service_proto_msgTypes,
 	}.Build()
-	File_persistence_proto_event_proto = out.File
-	file_persistence_proto_event_proto_goTypes = nil
-	file_persistence_proto_event_proto_depIdxs = nil
+	File_persistence_proto_event_service_proto = out.File
+	file_persistence_proto_event_service_proto_goTypes = nil
+	file_persistence_proto_event_service_proto_depIdxs = nil
 }

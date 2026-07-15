@@ -9,7 +9,7 @@ Client ◀───────────────────────�
 ```
 
 1. A client sends an event as JSON to the **ingestion** service (`POST /events`).
-2. Ingestion validates the payload and publishes it to the `events` Kafka topic, responding with `202 Accepted` — the write is asynchronous.
+2. Ingestion validates the payload, encodes it as protobuf, and publishes it to the `events` Kafka topic, responding with `202 Accepted` — the write is asynchronous.
 3. The **persistence** service consumes the topic and synchronously inserts each event into PostgreSQL.
 4. Stored events are served back via gRPC (`Get`, `List`).
 
@@ -38,13 +38,14 @@ ingestion/              Service A
 persistence/            Service B
   cmd/                  composition root
   consumer/             Kafka adapter: consumes `events`, drives the service
-  grpc/                 gRPC adapter: Get / List endpoints
+  rpc/                  gRPC adapter: Get / List endpoints
   service/              domain: Event type, sentinel errors, EventRepository port
   repo/                 Postgres adapter: implements service.EventRepository
     migrations/         SQL migrations (golang-migrate format)
-  proto/                protobuf definition (generated code in gen/)
+  proto/                gRPC API contract (generated code in gen/)
 pkg/
   correlation/          shared correlation-ID context helpers + Kafka header key
+  proto/                Kafka wire contract: the protobuf Event message (generated code in gen/)
 ```
 
 ## Service A — Ingestion
@@ -70,6 +71,12 @@ Kafka gives **at-least-once** delivery: offsets are committed only *after* an ev
 - The consumer treats that sentinel as success: it logs `duplicate event, skipping` and commits the offset. Effectively exactly-once persistence on top of at-least-once delivery.
 - **Poison pills** (messages that fail to unmarshal) can never succeed on retry, so they are logged and committed past instead of blocking the partition.
 - Transient store failures (e.g. database down) leave the offset uncommitted and stop the consumer, so the event is redelivered on restart — log and continue would risk silently dropping data.
+
+## Kafka wire format
+
+Events travel through Kafka as **protobuf**, not JSON. The message schema lives in [`pkg/proto/event.proto`](pkg/proto/event.proto) — a single contract shared by both sides: the ingestion publisher `proto.Marshal`s it, the persistence consumer `proto.Unmarshal`s it. Compared to the earlier JSON encoding, this replaces two hand-mirrored structs (with "must be kept in sync" comments) by one generated type, so the producer and consumer can no longer drift apart silently — plus a smaller payload and strict typing on the wire.
+
+Deliberately, this is a **separate contract from the gRPC API**: [`persistence/proto/event_service.proto`](persistence/proto/event_service.proto) defines its own `Event` message (proto package `eventservice` vs `event`). The two schemas are identical today, but the queue format and the query API belong to different consumers and evolve on different schedules — the mapping through `service.Event` in each adapter is the seam where they may diverge.
 
 ## Correlation IDs
 
@@ -106,7 +113,7 @@ Example requests for both services ship with the repo as a [Bruno](https://www.u
 2. Pick the **local** environment (top-right dropdown) — it supplies the ingestion URL (`localhost:8080`) and the persistence gRPC address (`localhost:9091`).
 3. Run **ingestion / Create Event** to publish an event, then **persistence / Get Event** or **List Events** to query it back over gRPC.
 
-The collection covers the happy path and both validation-failure cases (missing field, malformed JSON) for the HTTP API — each with a status-code assertion — plus the two gRPC queries. gRPC methods resolve via server reflection, or from `persistence/proto/event.proto`, which is registered at the collection level.
+The collection covers the happy path and both validation-failure cases (missing field, malformed JSON) for the HTTP API — each with a status-code assertion — plus the two gRPC queries. gRPC methods resolve via server reflection, or from `persistence/proto/event_service.proto`, which is registered at the collection level.
 
 ### Configuration
 
@@ -143,6 +150,6 @@ go test ./...
 ## Code generation
 
 ```sh
-make proto     # regenerate gRPC stubs (requires protoc + Go plugins)
+make proto     # regenerate protobuf code — Kafka Event + gRPC stubs (requires protoc + Go plugins)
 go generate ./...   # regenerate moq mocks
 ```

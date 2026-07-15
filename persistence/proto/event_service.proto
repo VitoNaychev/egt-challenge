@@ -1,8 +1,8 @@
 syntax = "proto3";
 
-package event;
+package eventservice;
 
-option go_package = "github.com/VitoNaychev/egt-challenge/persistence/gen;eventpb";
+option go_package = "github.com/VitoNaychev/egt-challenge/persistence/gen;eventsvcpb";
 
 import "google/protobuf/timestamp.proto";
 

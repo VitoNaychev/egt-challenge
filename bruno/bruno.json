@@ -11,8 +11,18 @@
   "protobuf": {
     "protoFiles": [
       {
-        "path": "../persistence/proto/event.proto",
+        "path": "../persistence/proto/event_service.proto",
         "type": "file"
+      },
+      {
+        "path": "../pkg/proto/event.proto",
+        "type": "file"
+      }
+    ],
+    "importPaths": [
+      {
+        "path": "..",
+        "type": "directory"
       }
     ]
   }

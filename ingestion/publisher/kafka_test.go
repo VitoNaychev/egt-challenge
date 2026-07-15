@@ -2,7 +2,6 @@ package publisher_test
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"net"
 	"syscall"
@@ -12,9 +11,11 @@ import (
 	"github.com/VitoNaychev/egt-challenge/ingestion/publisher"
 	"github.com/VitoNaychev/egt-challenge/ingestion/service"
 	"github.com/VitoNaychev/egt-challenge/pkg/correlation"
+	eventpb "github.com/VitoNaychev/egt-challenge/pkg/gen"
 	"github.com/segmentio/kafka-go"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"google.golang.org/protobuf/proto"
 )
 
 func TestKafkaPublisher(t *testing.T) {
@@ -26,15 +27,8 @@ func TestKafkaPublisher(t *testing.T) {
 		Timestamp: time.Date(2026, 7, 15, 12, 0, 0, 0, time.UTC),
 	}
 
-	t.Run("encodes event in JSON and publishes it keyed by session", func(t *testing.T) {
+	t.Run("encodes event as protobuf and publishes it keyed by session", func(t *testing.T) {
 		wantKey := []byte(event.SessionID)
-		wantValue, _ := json.Marshal(publisher.Event{
-			ID:        event.ID,
-			SessionID: event.SessionID,
-			Type:      event.Type,
-			Message:   event.Message,
-			Timestamp: event.Timestamp,
-		})
 
 		writer := &MessageWriterMock{
 			WriteMessagesFunc: func(ctx context.Context, msgs ...kafka.Message) error {
@@ -42,7 +36,8 @@ func TestKafkaPublisher(t *testing.T) {
 
 				msg := msgs[0]
 				assert.Equal(t, wantKey, msg.Key, "incorrect key")
-				assert.Equal(t, wantValue, msg.Value, "message value does not match JSON marshalled event")
+
+				assertProtoEncodedEvent(t, msg, event)
 
 				return nil
 			},
@@ -127,6 +122,18 @@ func TestKafkaPublisher(t *testing.T) {
 		assert.Len(t, writer.WriteMessagesCalls(), 1, "did not write message to queue")
 
 	})
+}
+
+func assertProtoEncodedEvent(t testing.TB, msg kafka.Message, want service.Event) {
+	t.Helper()
+
+	var got eventpb.Event
+	require.NoError(t, proto.Unmarshal(msg.Value, &got), "message value is not a proto marshalled event")
+	assert.Equal(t, want.ID, got.GetId())
+	assert.Equal(t, want.SessionID, got.GetSessionId())
+	assert.Equal(t, want.Type, got.GetType())
+	assert.Equal(t, want.Message, got.GetMessage())
+	assert.Equal(t, want.Timestamp, got.GetTimestamp().AsTime())
 }
 
 func assertCorrelationIDHeader(t testing.TB, msg kafka.Message, correlationID string) {

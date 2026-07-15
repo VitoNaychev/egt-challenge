@@ -1,24 +1,24 @@
-package grpc
+package rpc
 
 import (
 	"context"
 	"errors"
 	"log/slog"
 
-	eventpb "github.com/VitoNaychev/egt-challenge/persistence/gen"
+	eventsvcpb "github.com/VitoNaychev/egt-challenge/persistence/gen"
 	"github.com/VitoNaychev/egt-challenge/persistence/service"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
-//go:generate moq --pkg grpc_test -out event_mock_test.go . EventService
+//go:generate moq --pkg rpc_test -out event_mock_test.go . EventService
 type EventService interface {
 	Get(ctx context.Context, id string) (service.Event, error)
 	List(ctx context.Context) ([]service.Event, error)
 }
 type EventHandler struct {
-	eventpb.UnimplementedEventServiceServer
+	eventsvcpb.UnimplementedEventServiceServer
 
 	svc    EventService
 	logger *slog.Logger
@@ -31,7 +31,7 @@ func NewEventHandler(svc EventService, logger *slog.Logger) *EventHandler {
 	}
 }
 
-func (e *EventHandler) Get(ctx context.Context, req *eventpb.GetRequest) (*eventpb.GetResponse, error) {
+func (e *EventHandler) Get(ctx context.Context, req *eventsvcpb.GetRequest) (*eventsvcpb.GetResponse, error) {
 	if req.GetId() == "" {
 		return nil, status.Error(codes.InvalidArgument, "id is required")
 	}
@@ -45,29 +45,29 @@ func (e *EventHandler) Get(ctx context.Context, req *eventpb.GetRequest) (*event
 		return nil, status.Errorf(codes.Internal, "internal error")
 	}
 
-	return &eventpb.GetResponse{
+	return &eventsvcpb.GetResponse{
 		Event: eventToPb(event),
 	}, nil
 }
 
-func (e *EventHandler) List(ctx context.Context, req *eventpb.ListRequest) (*eventpb.ListResponse, error) {
+func (e *EventHandler) List(ctx context.Context, req *eventsvcpb.ListRequest) (*eventsvcpb.ListResponse, error) {
 	events, err := e.svc.List(ctx)
 	if err != nil {
 		e.logger.Error("list events failed", slog.Any("error", err))
 		return nil, status.Errorf(codes.Internal, "internal error")
 	}
 
-	pbEvents := []*eventpb.Event{}
+	pbEvents := []*eventsvcpb.Event{}
 	for _, ev := range events {
 		pbEvents = append(pbEvents, eventToPb(ev))
 	}
-	return &eventpb.ListResponse{
+	return &eventsvcpb.ListResponse{
 		Events: pbEvents,
 	}, nil
 }
 
-func eventToPb(e service.Event) *eventpb.Event {
-	return &eventpb.Event{
+func eventToPb(e service.Event) *eventsvcpb.Event {
+	return &eventsvcpb.Event{
 		Id:        e.ID,
 		SessionId: e.SessionID,
 		Type:      e.Type,

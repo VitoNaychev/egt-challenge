@@ -11,8 +11,8 @@ import (
 	"syscall"
 
 	"github.com/VitoNaychev/egt-challenge/persistence/consumer"
-	eventpb "github.com/VitoNaychev/egt-challenge/persistence/gen"
-	grpchandler "github.com/VitoNaychev/egt-challenge/persistence/grpc"
+	eventsvcpb "github.com/VitoNaychev/egt-challenge/persistence/gen"
+	"github.com/VitoNaychev/egt-challenge/persistence/rpc"
 	"github.com/VitoNaychev/egt-challenge/persistence/repo"
 	"github.com/VitoNaychev/egt-challenge/persistence/service"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -112,7 +112,7 @@ func run() error {
 	cons := consumer.NewKafkaConsumer(reader, svc, slog.Default().With("component", "consumer"))
 
 	grpcServer := grpc.NewServer()
-	eventpb.RegisterEventServiceServer(grpcServer, grpchandler.NewEventHandler(svc, slog.Default().With("component", "grpc")))
+	eventsvcpb.RegisterEventServiceServer(grpcServer, rpc.NewEventHandler(svc, slog.Default().With("component", "grpc")))
 
 	healthServer := health.NewServer()
 	healthpb.RegisterHealthServer(grpcServer, healthServer)

@@ -2,14 +2,15 @@ package consumer
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"log/slog"
 
 	"github.com/VitoNaychev/egt-challenge/persistence/service"
 	"github.com/VitoNaychev/egt-challenge/pkg/correlation"
+	eventpb "github.com/VitoNaychev/egt-challenge/pkg/gen"
 	"github.com/segmentio/kafka-go"
+	"google.golang.org/protobuf/proto"
 )
 
 //go:generate moq --pkg consumer_test -out kafka_mock_test.go . MessageReader EventService
@@ -54,8 +55,8 @@ func (k *KafkaConsumer) Run(ctx context.Context) error {
 			}
 		}
 
-		var event Event
-		err = json.Unmarshal(msg.Value, &event)
+		var event eventpb.Event
+		err = proto.Unmarshal(msg.Value, &event)
 		if err != nil {
 			// poison pill: retrying will never succeed, so commit and skip
 			logger.Warn("failed to unmarshal event", slog.Any("err", err))
@@ -66,21 +67,21 @@ func (k *KafkaConsumer) Run(ctx context.Context) error {
 		}
 
 		err = k.svc.Store(ctx, service.Event{
-			ID:        event.ID,
-			SessionID: event.SessionID,
-			Type:      event.Type,
-			Message:   event.Message,
-			Timestamp: event.Timestamp,
+			ID:        event.GetId(),
+			SessionID: event.GetSessionId(),
+			Type:      event.GetType(),
+			Message:   event.GetMessage(),
+			Timestamp: event.GetTimestamp().AsTime(),
 		})
 		switch {
 		case errors.Is(err, service.ErrEventAlreadyExists):
 			// redelivered event: already persisted, safe to commit and move on
-			logger.Info("duplicate event, skipping", slog.String("id", event.ID))
+			logger.Info("duplicate event, skipping", slog.String("id", event.GetId()))
 		case err != nil:
 			// leave uncommitted so the event is redelivered after restart
-			return fmt.Errorf("store event %s: %w", event.ID, err)
+			return fmt.Errorf("store event %s: %w", event.GetId(), err)
 		default:
-			logger.Debug("stored event", slog.String("id", event.ID))
+			logger.Debug("stored event", slog.String("id", event.GetId()))
 		}
 
 		if err := k.reader.CommitMessages(ctx, msg); err != nil {
