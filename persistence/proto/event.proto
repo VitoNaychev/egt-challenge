@@ -1,0 +1,29 @@
+syntax = "proto3";
+
+package event;
+
+option go_package = "github.com/VitoNaychev/egt-challenge/persistence/gen;eventpb";
+
+service EventService {
+  rpc Get (GetRequest) returns (GetResponse);
+  rpc List (ListRequest) returns (ListResponse);
+}
+
+message Event {
+  string id = 1;
+  string message = 2;
+}
+
+message GetRequest {
+  string id = 1;
+}
+
+message GetResponse {
+  Event event = 1;
+}
+
+message ListRequest{}
+
+message ListResponse {
+    repeated Event events = 1;
+}

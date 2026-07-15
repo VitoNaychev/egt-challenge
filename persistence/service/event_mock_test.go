@@ -19,6 +19,12 @@ var _ service.EventRepository = &EventRepositoryMock{}
 //
 //		// make and configure a mocked service.EventRepository
 //		mockedEventRepository := &EventRepositoryMock{
+//			GetFunc: func(ctx context.Context, id string) (service.Event, error) {
+//				panic("mock out the Get method")
+//			},
+//			ListFunc: func(ctx context.Context) ([]service.Event, error) {
+//				panic("mock out the List method")
+//			},
 //			StoreFunc: func(ctx context.Context, event service.Event) error {
 //				panic("mock out the Store method")
 //			},
@@ -29,11 +35,29 @@ var _ service.EventRepository = &EventRepositoryMock{}
 //
 //	}
 type EventRepositoryMock struct {
+	// GetFunc mocks the Get method.
+	GetFunc func(ctx context.Context, id string) (service.Event, error)
+
+	// ListFunc mocks the List method.
+	ListFunc func(ctx context.Context) ([]service.Event, error)
+
 	// StoreFunc mocks the Store method.
 	StoreFunc func(ctx context.Context, event service.Event) error
 
 	// calls tracks calls to the methods.
 	calls struct {
+		// Get holds details about calls to the Get method.
+		Get []struct {
+			// Ctx is the ctx argument value.
+			Ctx context.Context
+			// ID is the id argument value.
+			ID string
+		}
+		// List holds details about calls to the List method.
+		List []struct {
+			// Ctx is the ctx argument value.
+			Ctx context.Context
+		}
 		// Store holds details about calls to the Store method.
 		Store []struct {
 			// Ctx is the ctx argument value.
@@ -42,7 +66,77 @@ type EventRepositoryMock struct {
 			Event service.Event
 		}
 	}
+	lockGet   sync.RWMutex
+	lockList  sync.RWMutex
 	lockStore sync.RWMutex
+}
+
+// Get calls GetFunc.
+func (mock *EventRepositoryMock) Get(ctx context.Context, id string) (service.Event, error) {
+	if mock.GetFunc == nil {
+		panic("EventRepositoryMock.GetFunc: method is nil but EventRepository.Get was just called")
+	}
+	callInfo := struct {
+		Ctx context.Context
+		ID  string
+	}{
+		Ctx: ctx,
+		ID:  id,
+	}
+	mock.lockGet.Lock()
+	mock.calls.Get = append(mock.calls.Get, callInfo)
+	mock.lockGet.Unlock()
+	return mock.GetFunc(ctx, id)
+}
+
+// GetCalls gets all the calls that were made to Get.
+// Check the length with:
+//
+//	len(mockedEventRepository.GetCalls())
+func (mock *EventRepositoryMock) GetCalls() []struct {
+	Ctx context.Context
+	ID  string
+} {
+	var calls []struct {
+		Ctx context.Context
+		ID  string
+	}
+	mock.lockGet.RLock()
+	calls = mock.calls.Get
+	mock.lockGet.RUnlock()
+	return calls
+}
+
+// List calls ListFunc.
+func (mock *EventRepositoryMock) List(ctx context.Context) ([]service.Event, error) {
+	if mock.ListFunc == nil {
+		panic("EventRepositoryMock.ListFunc: method is nil but EventRepository.List was just called")
+	}
+	callInfo := struct {
+		Ctx context.Context
+	}{
+		Ctx: ctx,
+	}
+	mock.lockList.Lock()
+	mock.calls.List = append(mock.calls.List, callInfo)
+	mock.lockList.Unlock()
+	return mock.ListFunc(ctx)
+}
+
+// ListCalls gets all the calls that were made to List.
+// Check the length with:
+//
+//	len(mockedEventRepository.ListCalls())
+func (mock *EventRepositoryMock) ListCalls() []struct {
+	Ctx context.Context
+} {
+	var calls []struct {
+		Ctx context.Context
+	}
+	mock.lockList.RLock()
+	calls = mock.calls.List
+	mock.lockList.RUnlock()
+	return calls
 }
 
 // Store calls StoreFunc.

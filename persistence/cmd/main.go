@@ -5,20 +5,27 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"net"
 	"os"
 	"os/signal"
 	"syscall"
 
 	"github.com/VitoNaychev/egt-challenge/persistence/consumer"
+	eventpb "github.com/VitoNaychev/egt-challenge/persistence/gen"
+	grpchandler "github.com/VitoNaychev/egt-challenge/persistence/grpc"
 	"github.com/VitoNaychev/egt-challenge/persistence/repo"
 	"github.com/VitoNaychev/egt-challenge/persistence/service"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/segmentio/kafka-go"
 	"github.com/spf13/viper"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/health"
+	healthpb "google.golang.org/grpc/health/grpc_health_v1"
 )
 
 type Config struct {
 	LogLevel     string   `mapstructure:"LOG_LEVEL"`
+	GRPCAddr     string   `mapstructure:"GRPC_ADDR"`
 	KafkaBrokers []string `mapstructure:"KAFKA_BROKERS"`
 	KafkaTopic   string   `mapstructure:"KAFKA_TOPIC"`
 	KafkaGroupID string   `mapstructure:"KAFKA_GROUP_ID"`
@@ -35,6 +42,9 @@ func loadConfig() (Config, error) {
 	}
 	if cfg.LogLevel == "" {
 		return Config{}, errors.New("LOG_LEVEL must be set")
+	}
+	if cfg.GRPCAddr == "" {
+		return Config{}, errors.New("GRPC_ADDR must be set")
 	}
 	if len(cfg.KafkaBrokers) == 0 {
 		return Config{}, errors.New("KAFKA_BROKERS must be set")
@@ -100,11 +110,39 @@ func run() error {
 	svc := service.NewEventService(eventRepo)
 	cons := consumer.NewKafkaConsumer(reader, svc)
 
-	slog.Info("consumer started", "topic", cfg.KafkaTopic, "group", cfg.KafkaGroupID)
+	grpcServer := grpc.NewServer()
+	eventpb.RegisterEventServiceServer(grpcServer, grpchandler.NewEventHandler(svc))
 
-	if err := cons.Run(ctx); err != nil {
-		return fmt.Errorf("run consumer: %w", err)
+	healthServer := health.NewServer()
+	healthpb.RegisterHealthServer(grpcServer, healthServer)
+	healthServer.SetServingStatus("", healthpb.HealthCheckResponse_SERVING)
+
+	grpcListener, err := net.Listen("tcp", cfg.GRPCAddr)
+	if err != nil {
+		return fmt.Errorf("listen grpc: %w", err)
 	}
+
+	errCh := make(chan error, 2)
+	go func() {
+		slog.Info("grpc server listening", "addr", cfg.GRPCAddr)
+		if err := grpcServer.Serve(grpcListener); err != nil {
+			errCh <- fmt.Errorf("serve grpc: %w", err)
+		}
+	}()
+	go func() {
+		slog.Info("consumer started", "topic", cfg.KafkaTopic, "group", cfg.KafkaGroupID)
+		if err := cons.Run(ctx); err != nil {
+			errCh <- fmt.Errorf("run consumer: %w", err)
+			return
+		}
+		errCh <- nil
+	}()
+
+	err = <-errCh
 	slog.Info("shutting down")
-	return nil
+
+	stop()
+	healthServer.SetServingStatus("", healthpb.HealthCheckResponse_NOT_SERVING)
+	grpcServer.GracefulStop()
+	return err
 }
