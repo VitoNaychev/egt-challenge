@@ -3,6 +3,7 @@ package grpc_test
 import (
 	"context"
 	"errors"
+	"log/slog"
 	"testing"
 
 	eventpb "github.com/VitoNaychev/egt-challenge/persistence/gen"
@@ -27,7 +28,7 @@ func TestEventHandlerGet(t *testing.T) {
 				return event, nil
 			},
 		}
-		h := handler.NewEventHandler(svc)
+		h := handler.NewEventHandler(svc, slog.New(slog.DiscardHandler))
 
 		resp, err := h.Get(context.Background(), &eventpb.GetRequest{Id: event.ID})
 		require.NoError(t, err)
@@ -38,7 +39,7 @@ func TestEventHandlerGet(t *testing.T) {
 
 	t.Run("returns InvalidArgument on empty id", func(t *testing.T) {
 		svc := &EventServiceMock{}
-		h := handler.NewEventHandler(svc)
+		h := handler.NewEventHandler(svc, slog.New(slog.DiscardHandler))
 
 		_, err := h.Get(context.Background(), &eventpb.GetRequest{})
 		require.Error(t, err)
@@ -53,7 +54,7 @@ func TestEventHandlerGet(t *testing.T) {
 				return service.Event{}, service.ErrEventNotFound
 			},
 		}
-		h := handler.NewEventHandler(svc)
+		h := handler.NewEventHandler(svc, slog.New(slog.DiscardHandler))
 
 		_, err := h.Get(context.Background(), &eventpb.GetRequest{Id: event.ID})
 		require.Error(t, err)
@@ -67,7 +68,7 @@ func TestEventHandlerGet(t *testing.T) {
 				return service.Event{}, errors.New("example error")
 			},
 		}
-		h := handler.NewEventHandler(svc)
+		h := handler.NewEventHandler(svc, slog.New(slog.DiscardHandler))
 
 		_, err := h.Get(context.Background(), &eventpb.GetRequest{Id: event.ID})
 		require.Error(t, err)
@@ -88,7 +89,7 @@ func TestEventHandlerList(t *testing.T) {
 				return events, nil
 			},
 		}
-		h := handler.NewEventHandler(svc)
+		h := handler.NewEventHandler(svc, slog.New(slog.DiscardHandler))
 
 		resp, err := h.List(context.Background(), &eventpb.ListRequest{})
 		require.NoError(t, err)
@@ -106,7 +107,7 @@ func TestEventHandlerList(t *testing.T) {
 				return nil, nil
 			},
 		}
-		h := handler.NewEventHandler(svc)
+		h := handler.NewEventHandler(svc, slog.New(slog.DiscardHandler))
 
 		resp, err := h.List(context.Background(), &eventpb.ListRequest{})
 		require.NoError(t, err)
@@ -120,7 +121,7 @@ func TestEventHandlerList(t *testing.T) {
 				return nil, errors.New("example error")
 			},
 		}
-		h := handler.NewEventHandler(svc)
+		h := handler.NewEventHandler(svc, slog.New(slog.DiscardHandler))
 
 		_, err := h.List(context.Background(), &eventpb.ListRequest{})
 		require.Error(t, err)

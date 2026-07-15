@@ -9,10 +9,13 @@ import (
 	"time"
 
 	"github.com/VitoNaychev/egt-challenge/ingestion/service"
+	"github.com/VitoNaychev/egt-challenge/pkg/correlation"
 	"github.com/segmentio/kafka-go"
 )
 
-const defaultPublishTimeout = 2 * time.Second
+const (
+	defaultPublishTimeout = 2 * time.Second
+)
 
 type MessageWriter interface {
 	WriteMessages(ctx context.Context, msgs ...kafka.Message) error
@@ -44,8 +47,13 @@ func NewKafkaPublisher(writer MessageWriter, opts ...Option) *KafkaPublisher {
 }
 
 func (k *KafkaPublisher) Publish(ctx context.Context, event service.Event) error {
-	ctx, cancel := context.WithTimeout(ctx, k.timeout)
-	defer cancel()
+	var headers []kafka.Header
+	if correlationID, exists := correlation.FromContext(ctx); exists {
+		headers = append(headers, kafka.Header{
+			Key:   correlation.KafkaHeaderKey,
+			Value: []byte(correlationID),
+		})
+	}
 
 	value, err := json.Marshal(Event{
 		ID:      event.ID,
@@ -54,10 +62,15 @@ func (k *KafkaPublisher) Publish(ctx context.Context, event service.Event) error
 	if err != nil {
 		return fmt.Errorf("json marshal: %w", err)
 	}
+
+	ctx, cancel := context.WithTimeout(ctx, k.timeout)
+	defer cancel()
+
 	err = k.writer.WriteMessages(ctx,
 		kafka.Message{
-			Key:   []byte(event.ID),
-			Value: value,
+			Key:     []byte(event.ID),
+			Value:   value,
+			Headers: headers,
 		},
 	)
 	if err != nil {

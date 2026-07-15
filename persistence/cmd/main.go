@@ -108,10 +108,10 @@ func run() error {
 
 	eventRepo := repo.NewEventRepository(pool)
 	svc := service.NewEventService(eventRepo)
-	cons := consumer.NewKafkaConsumer(reader, svc)
+	cons := consumer.NewKafkaConsumer(reader, svc, slog.Default().With("component", "consumer"))
 
 	grpcServer := grpc.NewServer()
-	eventpb.RegisterEventServiceServer(grpcServer, grpchandler.NewEventHandler(svc))
+	eventpb.RegisterEventServiceServer(grpcServer, grpchandler.NewEventHandler(svc, slog.Default().With("component", "grpc")))
 
 	healthServer := health.NewServer()
 	healthpb.RegisterHealthServer(grpcServer, healthServer)

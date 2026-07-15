@@ -8,7 +8,9 @@ import (
 	"net/http"
 
 	"github.com/VitoNaychev/egt-challenge/ingestion/service"
+	"github.com/VitoNaychev/egt-challenge/pkg/correlation"
 	"github.com/go-playground/validator/v10"
+	"github.com/google/uuid"
 )
 
 //go:generate moq --pkg handler_test -out event_mock_test.go . EventService
@@ -41,10 +43,11 @@ func (e *EventHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 func (e *EventHandler) handleEvent(w http.ResponseWriter, r *http.Request) {
-	if r.Body == nil {
-		writeErrorResponse(w, http.StatusBadRequest, "missing request body")
-		return
-	}
+	// generate a unique ID that will identify this request's processing path
+	correlationID := uuid.New()
+
+	ctx := correlation.NewContext(r.Context(), correlationID.String())
+	requestLogger := e.logger.With(slog.String("correlation_id", correlationID.String()))
 
 	var event Event
 	err := json.NewDecoder(r.Body).Decode(&event)
@@ -59,9 +62,9 @@ func (e *EventHandler) handleEvent(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	eventLogger := e.logger.With(slog.String("event_id", event.ID))
+	eventLogger := requestLogger.With(slog.String("event_id", event.ID))
 
-	err = e.svc.Publish(r.Context(), service.Event{
+	err = e.svc.Publish(ctx, service.Event{
 		ID:      event.ID,
 		Message: event.Message,
 	})

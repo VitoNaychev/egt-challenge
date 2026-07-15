@@ -3,6 +3,7 @@ package grpc
 import (
 	"context"
 	"errors"
+	"log/slog"
 
 	eventpb "github.com/VitoNaychev/egt-challenge/persistence/gen"
 	"github.com/VitoNaychev/egt-challenge/persistence/service"
@@ -18,12 +19,14 @@ type EventService interface {
 type EventHandler struct {
 	eventpb.UnimplementedEventServiceServer
 
-	svc EventService
+	svc    EventService
+	logger *slog.Logger
 }
 
-func NewEventHandler(svc EventService) *EventHandler {
+func NewEventHandler(svc EventService, logger *slog.Logger) *EventHandler {
 	return &EventHandler{
-		svc: svc,
+		svc:    svc,
+		logger: logger,
 	}
 }
 
@@ -37,6 +40,7 @@ func (e *EventHandler) Get(ctx context.Context, req *eventpb.GetRequest) (*event
 		if errors.Is(err, service.ErrEventNotFound) {
 			return nil, status.Errorf(codes.NotFound, "event not found")
 		}
+		e.logger.Error("get event failed", slog.String("id", req.GetId()), slog.Any("error", err))
 		return nil, status.Errorf(codes.Internal, "internal error")
 	}
 
@@ -48,6 +52,7 @@ func (e *EventHandler) Get(ctx context.Context, req *eventpb.GetRequest) (*event
 func (e *EventHandler) List(ctx context.Context, req *eventpb.ListRequest) (*eventpb.ListResponse, error) {
 	events, err := e.svc.List(ctx)
 	if err != nil {
+		e.logger.Error("list events failed", slog.Any("error", err))
 		return nil, status.Errorf(codes.Internal, "internal error")
 	}
 

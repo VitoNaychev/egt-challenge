@@ -11,6 +11,7 @@ import (
 
 	"github.com/VitoNaychev/egt-challenge/ingestion/publisher"
 	"github.com/VitoNaychev/egt-challenge/ingestion/service"
+	"github.com/VitoNaychev/egt-challenge/pkg/correlation"
 	"github.com/segmentio/kafka-go"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -46,6 +47,26 @@ func TestKafkaPublisher(t *testing.T) {
 		require.NoError(t, err)
 
 		assert.Len(t, writer.WriteMessagesCalls(), 1, "did not write message to queue")
+	})
+
+	t.Run("includes correlation ID in message header if it exists", func(t *testing.T) {
+		correlationID := "example-correlation-id"
+
+		writer := &MessageWriterMock{
+			WriteMessagesFunc: func(ctx context.Context, msgs ...kafka.Message) error {
+				require.Len(t, msgs, 1)
+
+				assertCorrelationIDHeader(t, msgs[0], correlationID)
+				return nil
+			},
+		}
+		pub := publisher.NewKafkaPublisher(writer)
+
+		ctx := correlation.NewContext(context.Background(), correlationID)
+
+		err := pub.Publish(ctx, event)
+		require.NoError(t, err)
+
 	})
 
 	t.Run("returns service.ErrOverloaded on context timeout", func(t *testing.T) {
@@ -100,4 +121,18 @@ func TestKafkaPublisher(t *testing.T) {
 		assert.Len(t, writer.WriteMessagesCalls(), 1, "did not write message to queue")
 
 	})
+}
+
+func assertCorrelationIDHeader(t testing.TB, msg kafka.Message, correlationID string) {
+	t.Helper()
+
+	require.NotEmpty(t, msg.Headers, "no headers in message")
+	for _, h := range msg.Headers {
+		if h.Key == correlation.KafkaHeaderKey {
+			got := string(h.Value)
+			assert.Equal(t, correlationID, got)
+			return
+		}
+	}
+	t.Error("correlation id header does not exist")
 }

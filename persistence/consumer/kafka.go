@@ -8,6 +8,7 @@ import (
 	"log/slog"
 
 	"github.com/VitoNaychev/egt-challenge/persistence/service"
+	"github.com/VitoNaychev/egt-challenge/pkg/correlation"
 	"github.com/segmentio/kafka-go"
 )
 
@@ -24,12 +25,14 @@ type MessageReader interface {
 type KafkaConsumer struct {
 	reader MessageReader
 	svc    EventService
+	logger *slog.Logger
 }
 
-func NewKafkaConsumer(reader MessageReader, svc EventService) *KafkaConsumer {
+func NewKafkaConsumer(reader MessageReader, svc EventService, logger *slog.Logger) *KafkaConsumer {
 	return &KafkaConsumer{
 		reader: reader,
 		svc:    svc,
+		logger: logger,
 	}
 }
 
@@ -43,11 +46,19 @@ func (k *KafkaConsumer) Run(ctx context.Context) error {
 			return fmt.Errorf("fetch message: %w", err)
 		}
 
+		logger := k.logger
+		// try to add correlation id to logger
+		for _, h := range msg.Headers {
+			if h.Key == correlation.KafkaHeaderKey {
+				logger = logger.With(slog.String("correlation_id", string(h.Value)))
+			}
+		}
+
 		var event Event
 		err = json.Unmarshal(msg.Value, &event)
 		if err != nil {
 			// poison pill: retrying will never succeed, so commit and skip
-			slog.Warn("failed to unmarshal event", slog.String("key", string(msg.Key)), slog.Any("err", err))
+			logger.Warn("failed to unmarshal event", slog.Any("err", err))
 			if err := k.reader.CommitMessages(ctx, msg); err != nil {
 				return fmt.Errorf("commit message: %w", err)
 			}
@@ -66,6 +77,6 @@ func (k *KafkaConsumer) Run(ctx context.Context) error {
 		if err := k.reader.CommitMessages(ctx, msg); err != nil {
 			return fmt.Errorf("commit message: %w", err)
 		}
-		slog.Debug("stored event", slog.String("id", event.ID))
+		logger.Debug("stored event", slog.String("id", event.ID))
 	}
 }

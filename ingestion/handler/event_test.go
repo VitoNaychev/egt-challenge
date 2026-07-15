@@ -12,25 +12,57 @@ import (
 
 	"github.com/VitoNaychev/egt-challenge/ingestion/handler"
 	"github.com/VitoNaychev/egt-challenge/ingestion/service"
+	"github.com/VitoNaychev/egt-challenge/pkg/correlation"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
-func TestEventsHandler(t *testing.T) {
-	t.Run("returns MethodNotAllowed on non-POST requests", func(t *testing.T) {
-		handlerEvent := handler.Event{
-			ID:      "example-id",
-			Message: "hello, world",
-		}
-		eventJSON, err := json.Marshal(handlerEvent)
-		require.NoError(t, err, "failed to marshal event")
+func TestEventsHandler_CorrelationID(t *testing.T) {
+	handlerEvent := handler.Event{
+		ID:      "example-id",
+		Message: "hello, world",
+	}
+	eventJSON, err := json.Marshal(handlerEvent)
+	require.NoError(t, err, "failed to marshal event")
 
-		req := httptest.NewRequest(http.MethodPut, "/events", bytes.NewReader(eventJSON))
+	t.Run("propagates correlation_id through context", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodPost, "/events", bytes.NewReader(eventJSON))
 		resp := httptest.NewRecorder()
 
 		svc := &EventServiceMock{
 			PublishFunc: func(ctx context.Context, got service.Event) error {
-				t.Error("should not call publish on invalid event")
+				correlationID, exists := correlation.FromContext(ctx)
+
+				require.True(t, exists, "did not include correlation id in context")
+				assert.NotEmpty(t, correlationID, "correlation ID is empty")
+				return nil
+			},
+		}
+
+		hndl := handler.NewEventHandler(svc, slog.New(slog.DiscardHandler))
+		hndl.ServeHTTP(resp, req)
+	})
+
+	t.Run("generates unique IDs on respective calls", func(t *testing.T) {
+		var (
+			firstID  string
+			secondID string
+		)
+
+		req := httptest.NewRequest(http.MethodPost, "/events", bytes.NewReader(eventJSON))
+		resp := httptest.NewRecorder()
+
+		svc := &EventServiceMock{
+			PublishFunc: func(ctx context.Context, got service.Event) error {
+				var exists bool
+				if firstID == "" {
+					firstID, exists = correlation.FromContext(ctx)
+					require.True(t, exists, "did not include correlation id in first call")
+				} else {
+					secondID, exists = correlation.FromContext(ctx)
+					require.True(t, exists, "did not include correlation id in second call")
+				}
+
 				return nil
 			},
 		}
@@ -38,8 +70,38 @@ func TestEventsHandler(t *testing.T) {
 		hndl := handler.NewEventHandler(svc, slog.New(slog.DiscardHandler))
 		hndl.ServeHTTP(resp, req)
 
-		assert.Equal(t, http.StatusMethodNotAllowed, resp.Code)
+		// reinitialize request and response
+		req = httptest.NewRequest(http.MethodPost, "/events", bytes.NewReader(eventJSON))
+		resp = httptest.NewRecorder()
+
+		hndl.ServeHTTP(resp, req)
+
+		assert.NotEqual(t, firstID, secondID, "correlation id collision")
 	})
+}
+
+func TestEventsHandler_MethodValidation(t *testing.T) {
+	handlerEvent := handler.Event{
+		ID:      "example-id",
+		Message: "hello, world",
+	}
+	eventJSON, err := json.Marshal(handlerEvent)
+	require.NoError(t, err, "failed to marshal event")
+
+	req := httptest.NewRequest(http.MethodPut, "/events", bytes.NewReader(eventJSON))
+	resp := httptest.NewRecorder()
+
+	svc := &EventServiceMock{
+		PublishFunc: func(ctx context.Context, got service.Event) error {
+			t.Error("should not call publish on invalid event")
+			return nil
+		},
+	}
+
+	hndl := handler.NewEventHandler(svc, slog.New(slog.DiscardHandler))
+	hndl.ServeHTTP(resp, req)
+
+	assert.Equal(t, http.StatusMethodNotAllowed, resp.Code)
 }
 
 func TestEventHandler_RequestValidation(t *testing.T) {
