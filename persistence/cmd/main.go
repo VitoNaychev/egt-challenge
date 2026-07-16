@@ -9,6 +9,7 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
 	"github.com/VitoNaychev/egt-challenge/persistence/consumer"
 	eventsvcpb "github.com/VitoNaychev/egt-challenge/persistence/gen"
@@ -25,12 +26,15 @@ import (
 )
 
 type Config struct {
-	LogLevel     string   `mapstructure:"LOG_LEVEL"`
-	GRPCAddr     string   `mapstructure:"GRPC_ADDR"`
-	KafkaBrokers []string `mapstructure:"KAFKA_BROKERS"`
-	KafkaTopic   string   `mapstructure:"KAFKA_TOPIC"`
-	KafkaGroupID string   `mapstructure:"KAFKA_GROUP_ID"`
-	DatabaseURL  string   `mapstructure:"DATABASE_URL"`
+	LogLevel                 string        `mapstructure:"LOG_LEVEL"`
+	GRPCAddr                 string        `mapstructure:"GRPC_ADDR"`
+	KafkaBrokers             []string      `mapstructure:"KAFKA_BROKERS"`
+	KafkaTopic               string        `mapstructure:"KAFKA_TOPIC"`
+	KafkaGroupID             string        `mapstructure:"KAFKA_GROUP_ID"`
+	DatabaseURL              string        `mapstructure:"DATABASE_URL"`
+	ConsumerUnknownErrorRetryBudget int           `mapstructure:"CONSUMER_UNKNOWN_ERROR_RETRY_BUDGET"`
+	ConsumerBackoffDuration      time.Duration `mapstructure:"CONSUMER_BACKOFF_DURATION"`
+	ConsumerMaxBackoff           time.Duration `mapstructure:"CONSUMER_MAX_BACKOFF"`
 }
 
 func loadConfig() (Config, error) {
@@ -58,6 +62,15 @@ func loadConfig() (Config, error) {
 	}
 	if cfg.DatabaseURL == "" {
 		return Config{}, errors.New("DATABASE_URL must be set")
+	}
+	if cfg.ConsumerUnknownErrorRetryBudget <= 0 {
+		return Config{}, errors.New("CONSUMER_UNKNOWN_ERROR_RETRY_BUDGET must be set to a positive integer")
+	}
+	if cfg.ConsumerBackoffDuration <= 0 {
+		return Config{}, errors.New("CONSUMER_BACKOFF_DURATION must be set to a positive duration")
+	}
+	if cfg.ConsumerMaxBackoff < cfg.ConsumerBackoffDuration {
+		return Config{}, errors.New("CONSUMER_MAX_BACKOFF must be set to a duration >= CONSUMER_BACKOFF_DURATION")
 	}
 	return cfg, nil
 }
@@ -109,7 +122,12 @@ func run() error {
 
 	eventRepo := repo.NewEventRepository(pool)
 	svc := service.NewEventService(eventRepo)
-	cons := consumer.NewKafkaConsumer(reader, svc, slog.Default().With("component", "consumer"))
+	consumerConfig := consumer.Config{
+		UnknownErrorRetryBudget: cfg.ConsumerUnknownErrorRetryBudget,
+		BackoffDuration:      cfg.ConsumerBackoffDuration,
+		MaxBackoff:           cfg.ConsumerMaxBackoff,
+	}
+	cons := consumer.NewKafkaConsumer(consumerConfig, reader, svc, slog.Default().With("component", "consumer"))
 
 	grpcServer := grpc.NewServer()
 	eventsvcpb.RegisterEventServiceServer(grpcServer, rpc.NewEventHandler(svc, slog.Default().With("component", "grpc")))

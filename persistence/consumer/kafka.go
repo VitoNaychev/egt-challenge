@@ -2,9 +2,11 @@ package consumer
 
 import (
 	"context"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"log/slog"
+	"time"
 
 	"github.com/VitoNaychev/egt-challenge/persistence/service"
 	"github.com/VitoNaychev/egt-challenge/pkg/correlation"
@@ -23,14 +25,25 @@ type MessageReader interface {
 	CommitMessages(ctx context.Context, msgs ...kafka.Message) error
 }
 
+type Config struct {
+	// bound retries for errors the service layer did not classify
+	UnknownErrorRetryBudget int
+	// initial delay between retry attempts
+	BackoffDuration time.Duration
+	// caps the exponentially growing delay between retry attempts
+	MaxBackoff time.Duration
+}
+
 type KafkaConsumer struct {
+	config Config
 	reader MessageReader
 	svc    EventService
 	logger *slog.Logger
 }
 
-func NewKafkaConsumer(reader MessageReader, svc EventService, logger *slog.Logger) *KafkaConsumer {
+func NewKafkaConsumer(config Config, reader MessageReader, svc EventService, logger *slog.Logger) *KafkaConsumer {
 	return &KafkaConsumer{
+		config: config,
 		reader: reader,
 		svc:    svc,
 		logger: logger,
@@ -55,37 +68,95 @@ func (k *KafkaConsumer) Run(ctx context.Context) error {
 			}
 		}
 
-		var event eventpb.Event
-		err = proto.Unmarshal(msg.Value, &event)
+		var eventPb eventpb.Event
+		err = proto.Unmarshal(msg.Value, &eventPb)
 		if err != nil {
-			// poison pill: retrying will never succeed, so commit and skip
-			logger.Warn("failed to unmarshal event", slog.Any("err", err))
+			// poison pill: retrying will never succeed, so log the raw payload
+			// for later forensics and commit past it
+			logger.Error("dropping message: failed to unmarshal event",
+				slog.Any("err", err),
+				slog.Int("partition", msg.Partition),
+				slog.Int64("offset", msg.Offset),
+				slog.String("key", string(msg.Key)),
+				slog.String("payload_hex", hex.EncodeToString(msg.Value)),
+			)
 			if err := k.reader.CommitMessages(ctx, msg); err != nil {
 				return fmt.Errorf("commit message: %w", err)
 			}
 			continue
 		}
 
-		err = k.svc.Store(ctx, service.Event{
-			ID:        event.GetId(),
-			SessionID: event.GetSessionId(),
-			Type:      event.GetType(),
-			Message:   event.GetMessage(),
-			Timestamp: event.GetTimestamp().AsTime(),
-		})
+		event := service.Event{
+			ID:        eventPb.GetId(),
+			SessionID: eventPb.GetSessionId(),
+			Type:      eventPb.GetType(),
+			Message:   eventPb.GetMessage(),
+			Timestamp: eventPb.GetTimestamp().AsTime(),
+		}
+		// matches the "event_id" key the ingestion service logs under, so one
+		// grep follows an event across both services
+		eventLogger := logger.With(slog.String("event_id", event.ID))
+
+		fn := func(ctx context.Context) error {
+			return k.svc.Store(ctx, event)
+		}
+		err = withExponentialBackOff(ctx, eventLogger, k.config.BackoffDuration, k.config.MaxBackoff, k.config.UnknownErrorRetryBudget, fn)
 		switch {
+		case err == nil:
+			// fallthrough to commit
+		case ctx.Err() != nil:
+			// fallthrough on context error
 		case errors.Is(err, service.ErrEventAlreadyExists):
 			// redelivered event: already persisted, safe to commit and move on
-			logger.Info("duplicate event, skipping", slog.String("id", event.GetId()))
-		case err != nil:
-			// leave uncommitted so the event is redelivered after restart
-			return fmt.Errorf("store event %s: %w", event.GetId(), err)
+			eventLogger.Info("duplicate event, skipping")
+		case service.IsPermanent(err):
+			// log message payload and commit to avoid stalling the queue
+			eventLogger.Error("dropping event: permanent store error", slog.Any("event_data", event), slog.Any("err", err))
+		case !service.IsRetriable(err) && !service.IsPermanent(err):
+			// log message payload and commit to avoid stalling the queue
+			eventLogger.Error("dropping event: retry budget exhausted", slog.Any("event_data", event), slog.Any("err", err))
 		default:
-			logger.Debug("stored event", slog.String("id", event.GetId()))
+			eventLogger.Debug("stored event")
 		}
 
-		if err := k.reader.CommitMessages(ctx, msg); err != nil {
-			return fmt.Errorf("commit message: %w", err)
+		// should not commit message in case context was canceled
+		if ctx.Err() == nil {
+			if err := k.reader.CommitMessages(ctx, msg); err != nil {
+				return fmt.Errorf("commit message: %w", err)
+			}
 		}
 	}
+}
+
+func withExponentialBackOff(ctx context.Context, logger *slog.Logger, backoff, maxBackoff time.Duration, retryBudget int, fn func(context.Context) error) error {
+	err := fn(ctx)
+	attempt := 0
+	retries := 0
+	for err != nil {
+		if service.IsPermanent(err) {
+			return err
+		}
+		// event is neither permanent nor retriable
+		// therefore it is unclassified - retry up to retryBudget times
+		if !service.IsRetriable(err) {
+			if retries >= retryBudget {
+				return err
+			}
+			retries++
+		}
+		attempt++
+		logger.Warn("store failed, retrying",
+			slog.Int("attempt", attempt),
+			slog.Duration("backoff", backoff),
+			slog.Any("err", err),
+		)
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case <-time.After(backoff):
+			backoff = min(backoff*2, maxBackoff)
+		}
+		err = fn(ctx)
+	}
+	return nil
 }

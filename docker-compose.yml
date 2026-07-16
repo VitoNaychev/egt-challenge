@@ -97,6 +97,9 @@ services:
       KAFKA_TOPIC: events
       KAFKA_GROUP_ID: persistence
       DATABASE_URL: postgres://egt:events@postgres:5432/challenge?sslmode=disable
+      CONSUMER_UNKNOWN_ERROR_RETRY_BUDGET: "5"
+      CONSUMER_BACKOFF_DURATION: 500ms
+      CONSUMER_MAX_BACKOFF: 30s
     depends_on:
       kafka-init:
         condition: service_completed_successfully

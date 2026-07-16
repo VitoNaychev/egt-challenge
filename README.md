@@ -70,7 +70,16 @@ Kafka gives **at-least-once** delivery: offsets are committed only *after* an ev
 - The event ID is the table's **primary key**; the repository maps a unique-violation insert to `service.ErrEventAlreadyExists`.
 - The consumer treats that sentinel as success: it logs `duplicate event, skipping` and commits the offset. Effectively exactly-once persistence on top of at-least-once delivery.
 - **Poison pills** (messages that fail to unmarshal) can never succeed on retry, so they are logged and committed past instead of blocking the partition.
-- Transient store failures (e.g. database down) leave the offset uncommitted and stop the consumer, so the event is redelivered on restart — log and continue would risk silently dropping data.
+
+Store failures are handled by **error classification**: the service layer owns two marker types — `service.RetriableError` and `service.PermanentError` — that adapters use to tell the consumer *why* a store failed, and the consumer turns that into retry policy (classification lives where the knowledge is, the retry loop lives where the consequence is — a blocked partition):
+
+| Error class | Retry | Then |
+|---|---|---|
+| **Retriable** (e.g. database down) | exponential backoff until success or shutdown | never committed — an outage blocks the partition rather than losing data; shutdown mid-retry leaves the offset uncommitted for redelivery |
+| **Permanent** (can never succeed) | none | full event payload is logged at `ERROR` (a lightweight dead-letter record) and the offset is committed, so one hopeless event can't stall the partition |
+| **Unclassified** (anything unmarked) | up to `CONSUMER_UNKNOWN_ERROR_RETRY_BUDGET` retries | treated as permanent: logged with payload and committed past |
+
+The unclassified budget is deliberate misclassification insurance: an error nobody anticipated gets the benefit of the doubt (retries, in case it was transient) but only a bounded amount of it (so a wrongly-hopeful classification costs minutes of lag, not a stuck partition). Retry delays start at `CONSUMER_BACKOFF_DURATION`, double per attempt, and are capped at `CONSUMER_MAX_BACKOFF`.
 
 ## Kafka wire format
 
@@ -90,7 +99,7 @@ Because the ID travels in the context — Go's carrier for request-scoped metada
 
 ```
 {"level":"DEBUG","msg":"event accepted","component":"handler","correlation_id":"4f3a…","event_id":"evt-1"}
-{"level":"DEBUG","msg":"stored event","component":"consumer","correlation_id":"4f3a…","id":"evt-1"}
+{"level":"DEBUG","msg":"stored event","component":"consumer","correlation_id":"4f3a…","event_id":"evt-1"}
 ```
 
 Note the correlation ID identifies one *processing pass*, while the event ID identifies the *data* — a redelivered event keeps its event ID but is logged under each delivery's correlation ID.
@@ -134,6 +143,9 @@ Both services are configured entirely through environment variables (loaded with
 | persistence | `KAFKA_TOPIC` | `events` |
 | persistence | `KAFKA_GROUP_ID` | `persistence` |
 | persistence | `DATABASE_URL` | `postgres://…` |
+| persistence | `CONSUMER_UNKNOWN_ERROR_RETRY_BUDGET` | `5` |
+| persistence | `CONSUMER_BACKOFF_DURATION` | `500ms` |
+| persistence | `CONSUMER_MAX_BACKOFF` | `30s` |
 
 Both services shut down gracefully on `SIGINT`/`SIGTERM`: the health endpoint flips to `NOT_SERVING`, in-flight work drains, and the Kafka clients are closed.
 
